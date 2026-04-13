@@ -1,15 +1,15 @@
 # ComfyUI-SBTools
 
-**Version 1.0.0**
+**Version 1.1.0**
 
 Custom node collection for ComfyUI. Background removal and color analysis tools.
 
 ## Nodes
 
-| Node                | Category      | Description                                                  |
-| ------------------- | ------------- | ------------------------------------------------------------ |
-| BiRefNet (RemoveBG) | SBTools/Image | Advanced background removal with 5 model variants            |
-| Find Unused Color   | SBTools/Image | Find colors maximally different from image for chroma keying |
+| Node                             | Category      | Description                                                           |
+| -------------------------------- | ------------- | --------------------------------------------------------------------- |
+| BiRefNet RemoveBG (SBTools)      | SBTools/Image | Advanced background removal with 5 model variants                    |
+| Alpha to Chroma Key (SBTools)    | SBTools/Image | Find safe chroma key colors and fill transparent areas automatically |
 
 ## Installation
 
@@ -229,6 +229,36 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 ---
 
 ## Changelog
+
+### [1.1.0] - 2026-04-13
+
+#### Breaking Changes
+
+- **Node names updated for uniqueness**
+  - `BiRefNet` → `SBTools_BiRefNet` (display: "BiRefNet RemoveBG (SBTools)")
+  - `Find Unused Color` → `SBTools_AlphaToChromaKey` (display: "Alpha to Chroma Key (SBTools)")
+- **Alpha to Chroma Key output changed**
+  - Old: `hex_color`, `R`, `G`, `B` (4 outputs)
+  - New: `hex_color`, `filled_image` (2 outputs)
+
+#### Added
+
+- Alpha to Chroma Key: `filled_image` output - automatically fills transparent areas with the detected safe chroma key color
+- Alpha channel detection with informative console logging
+
+#### Changed
+
+- Simplified `requirements.txt` - only `huggingface_hub>=0.19.0` needed (torch, torchvision, pillow, numpy, safetensors are provided by ComfyUI)
+- All nodes now use `SBTools_` prefix in class names to prevent naming conflicts
+- Node display names include "(SBTools)" branding for easy identification
+
+#### Technical
+
+- BiRefNet: Refactored to use explicit function parameters instead of `**kwargs`
+- Improved code maintainability and IDE support
+- Better parameter type checking and documentation
+
+---
 
 ### [1.0.0] - 2026-04-13
 

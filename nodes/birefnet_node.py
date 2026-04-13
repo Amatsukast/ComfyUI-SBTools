@@ -272,7 +272,7 @@ class BiRefNetModel:
             handle_model_error(f"Error in BiRefNet processing: {str(e)}")
 
 
-class BiRefNet:
+class SBTools_BiRefNet:
     def __init__(self):
         self.model = BiRefNetModel()
 
@@ -454,6 +454,6 @@ class BiRefNet:
 
 
 # Node Mapping
-NODE_CLASS_MAPPINGS = {"BiRefNet": BiRefNet}
+NODE_CLASS_MAPPINGS = {"SBTools_BiRefNet": SBTools_BiRefNet}
 
-NODE_DISPLAY_NAME_MAPPINGS = {"BiRefNet": "BiRefNet (RemoveBG)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"SBTools_BiRefNet": "BiRefNet RemoveBG (SBTools)"}
