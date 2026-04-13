@@ -34,6 +34,31 @@ pip install -r requirements.txt
 
 4. Restart ComfyUI
 
+## Updating
+
+### From v1.0.0 to v1.1.0
+
+**Important:** Node names have changed in v1.1.0. After updating:
+
+1. Run the update command (or use `install_sbtools.bat` if you have it)
+2. **Restart ComfyUI completely**
+3. **Clear browser cache** (Ctrl+Shift+R or Ctrl+F5)
+4. Old nodes (`BiRefNet`, `Find Unused Color`) will be automatically removed
+
+**Note:** The update script automatically cleans Python cache to prevent conflicts.
+
+### General Update
+
+Navigate to the custom node directory and pull the latest changes:
+
+```bash
+cd ComfyUI/custom_nodes/ComfyUI-SBTools
+git pull
+pip install -r requirements.txt
+```
+
+Then restart ComfyUI.
+
 ## Usage
 
 All nodes are located under `SBTools/Image` category in ComfyUI.
