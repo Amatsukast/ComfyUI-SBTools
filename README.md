@@ -1,8 +1,17 @@
 # ComfyUI-SBTools
 
-Personal custom node collection for ComfyUI. A collection of practical image processing nodes focused on background removal and color analysis.
+**Version 1.0.0**
 
-## 📦 Installation
+Custom node collection for ComfyUI. Background removal and color analysis tools.
+
+## Nodes
+
+| Node                | Category      | Description                                                  |
+| ------------------- | ------------- | ------------------------------------------------------------ |
+| BiRefNet (RemoveBG) | SBTools/Image | Advanced background removal with 5 model variants            |
+| Find Unused Color   | SBTools/Image | Find colors maximally different from image for chroma keying |
+
+## Installation
 
 1. Navigate to your ComfyUI custom nodes directory:
 
@@ -25,7 +34,7 @@ pip install -r requirements.txt
 
 4. Restart ComfyUI
 
-## 🎨 Nodes
+## Usage
 
 All nodes are located under `SBTools/Image` category in ComfyUI.
 
@@ -98,19 +107,19 @@ Advanced background removal using BiRefNet models. Supports multiple model varia
 
 #### Tips
 
-💡 **Processing Resolution:**
+**Processing Resolution:**
 
 - **Square models** (general, HR, portrait, toonout) resize images to a fixed square
 - **Dynamic model** preserves aspect ratio by resizing the longest side only
 
-💡 **Mask Refinement:**
+**Mask Refinement:**
 
 - Start with `mask_blur: 0` and `mask_offset: 0`
 - Use `mask_blur: 2-5` for softer, more natural edges
 - Use `mask_offset: +2 to +5` if edges are too tight
 - Use `mask_offset: -2 to -5` if edges include too much background
 
-💡 **Performance:**
+**Performance:**
 
 - Smaller images process faster
 - BiRefNet-general is fastest
@@ -159,24 +168,24 @@ Finds a color in your image that is maximally different from all existing colors
 
 #### Tips
 
-💡 **For chroma keying:**
+**For chroma keying:**
 
 - Use `min_distance: 40-60` for safe separation
 - Pure green (0, 255, 0) is usually selected for typical images
 
-💡 **For quick results:**
+**For quick results:**
 
 - Use `sample_size: 5000` (default)
 - Increase to 10000-20000 for images with complex color palettes
 
-💡 **Distance metric:**
+**Distance metric:**
 
 - Distance is calculated as Euclidean distance in RGB space
 - A distance of 30 means the color differs by ~30 units per channel on average
 
 ---
 
-## 📁 Model Storage
+## Model Storage
 
 BiRefNet models are automatically downloaded and stored in:
 
@@ -186,18 +195,70 @@ ComfyUI/models/sbtools/BiRefNet/
 
 Models are downloaded on first use and cached for future sessions.
 
-## 🙏 Credits
+## Credits
 
 **BiRefNet Node** is based on [ComfyUI-RMBG](https://github.com/AILab-AI/ComfyUI-RMBG) by AILab-AI
 
 **BiRefNet Models** by ZhengPeng7 - [HuggingFace](https://huggingface.co/ZhengPeng7/BiRefNet) | [GitHub](https://github.com/ZhengPeng7/BiRefNet)
 
-## 📄 License
+## License
 
-This project includes code derived from ComfyUI-RMBG, which is licensed under GPL-3.0.
+### Code License
 
-BiRefNet models are licensed under Apache-2.0.
+This project is licensed under **GNU General Public License v3.0 (GPL-3.0)**.
+
+- **BiRefNet node** is based on [ComfyUI-RMBG](https://github.com/AILab-AI/ComfyUI-RMBG) by AILab-AI (GPL-3.0)
+- **Find Unused Color node** is original work by Amatsukast
+
+See [LICENSE](LICENSE) for details.
+
+### Model License
+
+BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
+
+- Model repository: [ZhengPeng7/BiRefNet](https://huggingface.co/ZhengPeng7/BiRefNet)
+- You can use the models freely for commercial and non-commercial purposes
+
+### Summary
+
+- ✅ You can use, modify, and distribute this code
+- ✅ You can use the models commercially
+- ⚠️ Modifications must also be GPL-3.0
+- ⚠️ You must provide source code when distributing
 
 ---
 
-**Note:** This is a personal custom node collection for internal use. Use at your own discretion.
+## Changelog
+
+### [1.0.0] - 2026-04-13
+
+#### Added
+
+- BiRefNet (RemoveBG) node with 5 model variants
+  - BiRefNet-general: 1024px, balanced performance
+  - BiRefNet-HR: 2048px, high quality
+  - BiRefNet-portrait: 1024px, optimized for human subjects
+  - BiRefNet_dynamic: variable resolution with aspect ratio preservation
+  - BiRefNet_toonout: 1024px, outline extraction
+- Find Unused Color node for chroma key color detection
+- Automatic model download from HuggingFace
+- Custom model storage in `models/sbtools/BiRefNet/`
+- Support for transparent and colored backgrounds
+- Mask refinement options (blur, offset, invert)
+
+#### Optimizations
+
+- Reduced model selection from 11 to 5 carefully chosen variants
+- Improved aspect ratio handling for BiRefNet_dynamic
+- Optimized processing resolution based on input size
+
+#### Technical
+
+- Modular package structure
+- English-only codebase
+- Comprehensive README documentation
+- Version tracking in `__init__.py`
+
+---
+
+**Note:** This is a personal custom node collection. Use at your own discretion.

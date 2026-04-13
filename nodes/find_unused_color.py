@@ -1,3 +1,8 @@
+# ComfyUI-SBTools - Find Unused Color Node
+#
+# Copyright (c) Amatsukast
+# Licensed under GPL-3.0
+
 import torch
 import time
 

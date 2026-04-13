@@ -1,3 +1,11 @@
+# ComfyUI-SBTools - BiRefNet Background Removal Node
+#
+# Copyright (c) Amatsukast
+# Based on ComfyUI-RMBG by AILab-AI (https://github.com/AILab-AI/ComfyUI-RMBG)
+# Licensed under GPL-3.0
+#
+# BiRefNet models by ZhengPeng7 are licensed under Apache-2.0
+
 import os
 import torch
 from PIL import Image, ImageFilter
@@ -325,7 +333,16 @@ class BiRefNet:
     FUNCTION = "process_image"
     CATEGORY = "SBTools/Image"
 
-    def process_image(self, image, model, **params):
+    def process_image(
+        self,
+        image,
+        model,
+        mask_blur=0,
+        mask_offset=0,
+        invert_output=False,
+        background="Alpha",
+        background_color="#222222",
+    ):
         try:
             model_config = MODEL_CONFIG[model]
             aspect_mode = model_config.get("aspect_mode", "square")
@@ -356,8 +373,8 @@ class BiRefNet:
                 process_res = (process_res // 32) * 32
                 print(f"Using {model} with square resize: {process_res}x{process_res}")
 
-            params["process_res"] = process_res
-            params["aspect_mode"] = aspect_mode
+            # Prepare parameters for model processing
+            params = {"process_res": process_res, "aspect_mode": aspect_mode}
             processed_images = []
             processed_masks = []
             cache_status, message = self.model.check_model_cache(model)
@@ -371,25 +388,23 @@ class BiRefNet:
             self.model.load_model(model)
             for img in image:
                 mask = self.model.process_image(img, params)
-                if params["mask_blur"] > 0:
-                    mask = mask.filter(
-                        ImageFilter.GaussianBlur(radius=params["mask_blur"])
-                    )
-                if params["mask_offset"] != 0:
-                    if params["mask_offset"] > 0:
-                        for _ in range(params["mask_offset"]):
+                if mask_blur > 0:
+                    mask = mask.filter(ImageFilter.GaussianBlur(radius=mask_blur))
+                if mask_offset != 0:
+                    if mask_offset > 0:
+                        for _ in range(mask_offset):
                             mask = mask.filter(ImageFilter.MaxFilter(3))
                     else:
-                        for _ in range(-params["mask_offset"]):
+                        for _ in range(-mask_offset):
                             mask = mask.filter(ImageFilter.MinFilter(3))
-                if params["invert_output"]:
+                if invert_output:
                     mask = Image.fromarray(255 - np.array(mask))
 
                 orig_image = tensor2pil(img)
                 orig_rgba = orig_image.convert("RGBA")
                 r, g, b, _ = orig_rgba.split()
                 foreground = Image.merge("RGBA", (r, g, b, mask))
-                if params["background"] == "Alpha":
+                if background == "Alpha":
                     processed_images.append(pil2tensor(foreground))
                 else:
 
@@ -413,7 +428,6 @@ class BiRefNet:
                             raise ValueError("Invalid color format")
                         return (r, g, b, a)
 
-                    background_color = params.get("background_color", "#222222")
                     rgba = hex_to_rgba(background_color)
                     bg_image = Image.new("RGBA", orig_image.size, rgba)
                     composite_image = Image.alpha_composite(bg_image, foreground)
