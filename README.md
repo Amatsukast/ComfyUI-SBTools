@@ -19,29 +19,31 @@ Search for "SBTools" in ComfyUI Manager and click Install.
 
 ### Method 2: Manual Installation
 
-1. **Open your ComfyUI custom nodes folder**
-   - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes`
-   - Standard: `ComfyUI\custom_nodes`
+**Step 1: Open your ComfyUI custom nodes folder**
+- Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes`
+- Standard: `ComfyUI\custom_nodes`
 
-2. **Open terminal in this folder**
-   - Windows: Right-click → "Open in Terminal" or "Git Bash Here"
-   - Mac/Linux: Right-click → "Open Terminal Here"
-
-3. **Run the following commands:**
+**Step 2: Open terminal in this folder and clone the repository**
 
 ```bash
 git clone https://github.com/Amatsukast/ComfyUI-SBTools.git
+```
+
+**Step 3: Install dependencies**
+
+**For Windows Portable:**
+```bash
+cd ComfyUI-SBTools
+..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
+```
+
+**For Standard Installation (venv/conda):**
+```bash
 cd ComfyUI-SBTools
 pip install -r requirements.txt
 ```
 
-**Note for Windows Portable users:**  
-If `pip` is not recognized, use:
-```bash
-..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
-```
-
-4. **Restart ComfyUI**
+**Step 4: Restart ComfyUI**
 
 ## Updating
 
@@ -58,26 +60,29 @@ If `pip` is not recognized, use:
 
 ### General Update
 
-1. **Open the ComfyUI-SBTools folder**
-   - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-SBTools`
-   - Standard: `ComfyUI\custom_nodes\ComfyUI-SBTools`
+**Step 1: Open the ComfyUI-SBTools folder**
+- Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-SBTools`
+- Standard: `ComfyUI\custom_nodes\ComfyUI-SBTools`
 
-2. **Open terminal in this folder**
-
-3. **Run the following commands:**
+**Step 2: Open terminal in this folder and pull updates**
 
 ```bash
 git pull
-pip install -r requirements.txt
 ```
 
-**Note for Windows Portable users:**  
-If `pip` is not recognized, use:
+**Step 3: Update dependencies**
+
+**For Windows Portable:**
 ```bash
 ..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
 ```
 
-4. **Restart ComfyUI**
+**For Standard Installation (venv/conda):**
+```bash
+pip install -r requirements.txt
+```
+
+**Step 4: Restart ComfyUI**
 
 ## Usage
 
