@@ -24,3 +24,6 @@ Thumbs.db
 # Test files
 test/
 tests/
+
+# Scripts for local use only
+scripts/
