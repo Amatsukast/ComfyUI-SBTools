@@ -13,26 +13,35 @@ Custom node collection for ComfyUI. Background removal and color analysis tools.
 
 ## Installation
 
-1. Navigate to your ComfyUI custom nodes directory:
+### Method 1: ComfyUI Manager (Recommended)
 
-```bash
-cd ComfyUI/custom_nodes
-```
+Search for "SBTools" in ComfyUI Manager and click Install.
 
-2. Clone this repository:
+### Method 2: Manual Installation
+
+1. **Open your ComfyUI custom nodes folder**
+   - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes`
+   - Standard: `ComfyUI\custom_nodes`
+
+2. **Open terminal in this folder**
+   - Windows: Right-click → "Open in Terminal" or "Git Bash Here"
+   - Mac/Linux: Right-click → "Open Terminal Here"
+
+3. **Run the following commands:**
 
 ```bash
 git clone https://github.com/Amatsukast/ComfyUI-SBTools.git
-```
-
-3. Install dependencies:
-
-```bash
 cd ComfyUI-SBTools
 pip install -r requirements.txt
 ```
 
-4. Restart ComfyUI
+**Note for Windows Portable users:**  
+If `pip` is not recognized, use:
+```bash
+..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
+```
+
+4. **Restart ComfyUI**
 
 ## Updating
 
@@ -49,15 +58,26 @@ pip install -r requirements.txt
 
 ### General Update
 
-Navigate to the custom node directory and pull the latest changes:
+1. **Open the ComfyUI-SBTools folder**
+   - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-SBTools`
+   - Standard: `ComfyUI\custom_nodes\ComfyUI-SBTools`
+
+2. **Open terminal in this folder**
+
+3. **Run the following commands:**
 
 ```bash
-cd ComfyUI/custom_nodes/ComfyUI-SBTools
 git pull
 pip install -r requirements.txt
 ```
 
-Then restart ComfyUI.
+**Note for Windows Portable users:**  
+If `pip` is not recognized, use:
+```bash
+..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
+```
+
+4. **Restart ComfyUI**
 
 ## Usage
 
