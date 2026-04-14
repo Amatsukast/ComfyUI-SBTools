@@ -7,6 +7,9 @@ import torch
 import time
 import numpy as np
 from PIL import Image
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SBTools_AlphaToChromaKey:
@@ -151,13 +154,11 @@ class SBTools_AlphaToChromaKey:
             # Composite using alpha channel as mask
             background.paste(orig_image, (0, 0), orig_image)
             filled_image = background
-            print(f"[INFO] Filled transparent areas with chroma key color: {hex_color}")
+            logger.info(f"Filled transparent areas with chroma key color: {hex_color}")
         else:
             # No alpha channel - return as-is (convert to RGB if needed)
             filled_image = orig_image.convert('RGB')
-            print(f"[WARNING] Input image has no alpha channel (not transparent)")
-            print(f"[WARNING] Background fill skipped - returning original image")
-            print(f"[INFO] Safe chroma key color found: {hex_color} (use with other nodes if needed)")
+            logger.warning(f"Input image has no alpha channel - background fill skipped. Safe color: {hex_color}")
 
         # Convert PIL image back to tensor
         filled_tensor = torch.from_numpy(np.array(filled_image).astype(np.float32) / 255.0).unsqueeze(0)
