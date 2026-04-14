@@ -4,12 +4,8 @@
 # Licensed under GPL-3.0
 
 import torch
-import time
 import numpy as np
 from PIL import Image
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class SBTools_AlphaToChromaKey:
@@ -55,13 +51,10 @@ class SBTools_AlphaToChromaKey:
     OUTPUT_NODE = False
 
     def process_image(self, image, min_distance, sample_size):
-        t0 = time.time()
         # ComfyUI image tensor format: (B, H, W, C) with values 0.0-1.0
         # Get first batch RGB 3 channels and convert to 0-255
         img_255 = (image[0, :, :, :3] * 255).round().clamp(0, 255).to(torch.uint8)
-        print(f"[DEBUG] Image conversion: {time.time() - t0:.3f}s")
 
-        t1 = time.time()
         # Random sampling from all pixels (avoiding unique operation)
         pixels = img_255.reshape(-1, 3)
         total_pixels = pixels.shape[0]
@@ -74,10 +67,6 @@ class SBTools_AlphaToChromaKey:
             :actual_sample_size
         ]
         sampled_pixels = pixels[indices].float()
-
-        print(
-            f"[DEBUG] Sampling: {time.time() - t1:.3f}s, samples: {actual_sample_size}/{total_pixels}"
-        )
 
         # Common pure color candidates for chroma key
         candidates = torch.tensor(
@@ -93,7 +82,6 @@ class SBTools_AlphaToChromaKey:
             device=sampled_pixels.device,
         )
 
-        t2 = time.time()
         best_candidate = None
         best_min_distance = -1
 
@@ -103,28 +91,20 @@ class SBTools_AlphaToChromaKey:
             distances = torch.sqrt(((sampled_pixels - candidate) ** 2).sum(dim=1))
             min_dist = distances.min().item()
 
-            print(
-                f"[DEBUG] {tuple(candidate.int().tolist())}: min_distance={min_dist:.1f}"
-            )
-
             # Accept if min_distance >= threshold and is the best so far
             if min_dist >= min_distance and min_dist > best_min_distance:
                 best_min_distance = min_dist
                 best_candidate = candidate
 
-        print(f"[DEBUG] Distance calculation: {time.time() - t2:.3f}s")
-
         unused = None
         if best_candidate is not None:
             unused = tuple(best_candidate.int().tolist())
-            print(f"[DEBUG] Selected: {unused}, min_distance={best_min_distance:.1f}")
 
         # Coarse search if no candidate color found
         if unused is None:
             print(
-                "[DEBUG] No candidate color meets the criteria. Starting coarse search..."
+                "\033[93mNo standard chroma key color found. Searching for alternative...\033[0m"
             )
-            t3 = time.time()
 
             step = 17  # 0, 17, 34, ..., 255 (16 steps)
             for r in range(0, 256, step):
@@ -141,8 +121,6 @@ class SBTools_AlphaToChromaKey:
                         if min_dist >= min_distance and min_dist > best_min_distance:
                             best_min_distance = min_dist
                             unused = (r, g, b)
-
-            print(f"[DEBUG] Coarse search: {time.time() - t3:.3f}s")
 
         # Fallback if still not found (theoretically should not happen)
         if unused is None:
@@ -161,12 +139,12 @@ class SBTools_AlphaToChromaKey:
             # Composite using alpha channel as mask
             background.paste(orig_image, (0, 0), orig_image)
             filled_image = background
-            logger.info(f"Filled transparent areas with chroma key color: {hex_color}")
+            print(f"Filled transparent areas with chroma key color: {hex_color}")
         else:
             # No alpha channel - return as-is (convert to RGB if needed)
             filled_image = orig_image.convert("RGB")
-            logger.warning(
-                f"Input image has no alpha channel - background fill skipped. Safe color: {hex_color}"
+            print(
+                f"\033[93m[WARNING] Input image has no alpha channel - background fill skipped. Safe color: {hex_color}\033[0m"
             )
 
         # Convert PIL image back to tensor
@@ -174,7 +152,6 @@ class SBTools_AlphaToChromaKey:
             np.array(filled_image).astype(np.float32) / 255.0
         ).unsqueeze(0)
 
-        print(f"[DEBUG] Total time: {time.time() - t0:.3f}s")
         return (hex_color, filled_tensor)
 
 
