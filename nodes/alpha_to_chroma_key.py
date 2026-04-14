@@ -151,11 +151,13 @@ class SBTools_AlphaToChromaKey:
             # Composite using alpha channel as mask
             background.paste(orig_image, (0, 0), orig_image)
             filled_image = background
-            print(f"[INFO] Filled transparent areas with color: {hex_color}")
+            print(f"[INFO] Filled transparent areas with chroma key color: {hex_color}")
         else:
             # No alpha channel - return as-is (convert to RGB if needed)
             filled_image = orig_image.convert('RGB')
-            print(f"[INFO] No alpha channel - skipped background fill. Found safe color: {hex_color}")
+            print(f"[WARNING] Input image has no alpha channel (not transparent)")
+            print(f"[WARNING] Background fill skipped - returning original image")
+            print(f"[INFO] Safe chroma key color found: {hex_color} (use with other nodes if needed)")
 
         # Convert PIL image back to tensor
         filled_tensor = torch.from_numpy(np.array(filled_image).astype(np.float32) / 255.0).unsqueeze(0)
