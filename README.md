@@ -6,10 +6,10 @@ Custom node collection for ComfyUI. Background removal and color analysis tools.
 
 ## Nodes
 
-| Node                             | Category      | Description                                                           |
-| -------------------------------- | ------------- | --------------------------------------------------------------------- |
-| BiRefNet RemoveBG (SBTools)      | SBTools/Image | Advanced background removal with 5 model variants                    |
-| Alpha to Chroma Key (SBTools)    | SBTools/Image | Find safe chroma key colors and fill transparent areas automatically |
+| Node                          | Category      | Description                                                          |
+| ----------------------------- | ------------- | -------------------------------------------------------------------- |
+| BiRefNet RemoveBG (SBTools)   | SBTools/Image | Advanced background removal with 5 model variants                    |
+| Alpha to Chroma Key (SBTools) | SBTools/Image | Find safe chroma key colors and fill transparent areas automatically |
 
 ## Installation
 
@@ -20,6 +20,7 @@ Search for "SBTools" in ComfyUI Manager and click Install.
 ### Method 2: Manual Installation
 
 **Step 1: Open your ComfyUI custom nodes folder**
+
 - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes`
 - Standard: `ComfyUI\custom_nodes`
 
@@ -32,12 +33,14 @@ git clone https://github.com/Amatsukast/ComfyUI-SBTools.git
 **Step 3: Install dependencies**
 
 **For Windows Portable:**
+
 ```bash
 cd ComfyUI-SBTools
 ..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
 ```
 
 **For Standard Installation (venv/conda):**
+
 ```bash
 cd ComfyUI-SBTools
 pip install -r requirements.txt
@@ -61,6 +64,7 @@ pip install -r requirements.txt
 ### General Update
 
 **Step 1: Open the ComfyUI-SBTools folder**
+
 - Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-SBTools`
 - Standard: `ComfyUI\custom_nodes\ComfyUI-SBTools`
 
@@ -73,11 +77,13 @@ git pull
 **Step 3: Update dependencies**
 
 **For Windows Portable:**
+
 ```bash
 ..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
 ```
 
 **For Standard Installation (venv/conda):**
+
 ```bash
 pip install -r requirements.txt
 ```

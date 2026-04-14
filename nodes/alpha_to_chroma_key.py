@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 class SBTools_AlphaToChromaKey:
     @classmethod
     def INPUT_TYPES(cls):
+        tooltips = {
+            "image": "Input image to analyze for finding a safe chroma key color.",
+            "min_distance": "Minimum color distance required from existing colors (higher = more different, recommended: 30-60 for chroma keying).",
+            "sample_size": "Number of pixels to sample for analysis (higher = more accurate but slower).",
+        }
         return {
             "required": {
-                "image": ("IMAGE",),
+                "image": ("IMAGE", {"tooltip": tooltips["image"]}),
                 "min_distance": (
                     "INT",
                     {
@@ -26,6 +31,7 @@ class SBTools_AlphaToChromaKey:
                         "max": 255,
                         "step": 1,
                         "display": "slider",
+                        "tooltip": tooltips["min_distance"],
                     },
                 ),
                 "sample_size": (
@@ -36,6 +42,7 @@ class SBTools_AlphaToChromaKey:
                         "max": 50000,
                         "step": 1000,
                         "display": "slider",
+                        "tooltip": tooltips["sample_size"],
                     },
                 ),
             }
@@ -148,20 +155,24 @@ class SBTools_AlphaToChromaKey:
         orig_image = Image.fromarray((image[0].cpu().numpy() * 255).astype(np.uint8))
 
         # Fill transparent areas with the safe chroma key color
-        if orig_image.mode == 'RGBA':
+        if orig_image.mode == "RGBA":
             # Create background with chroma key color
-            background = Image.new('RGB', orig_image.size, (r, g, b))
+            background = Image.new("RGB", orig_image.size, (r, g, b))
             # Composite using alpha channel as mask
             background.paste(orig_image, (0, 0), orig_image)
             filled_image = background
             logger.info(f"Filled transparent areas with chroma key color: {hex_color}")
         else:
             # No alpha channel - return as-is (convert to RGB if needed)
-            filled_image = orig_image.convert('RGB')
-            logger.warning(f"Input image has no alpha channel - background fill skipped. Safe color: {hex_color}")
+            filled_image = orig_image.convert("RGB")
+            logger.warning(
+                f"Input image has no alpha channel - background fill skipped. Safe color: {hex_color}"
+            )
 
         # Convert PIL image back to tensor
-        filled_tensor = torch.from_numpy(np.array(filled_image).astype(np.float32) / 255.0).unsqueeze(0)
+        filled_tensor = torch.from_numpy(
+            np.array(filled_image).astype(np.float32) / 255.0
+        ).unsqueeze(0)
 
         print(f"[DEBUG] Total time: {time.time() - t0:.3f}s")
         return (hex_color, filled_tensor)
@@ -169,4 +180,6 @@ class SBTools_AlphaToChromaKey:
 
 NODE_CLASS_MAPPINGS = {"SBTools_AlphaToChromaKey": SBTools_AlphaToChromaKey}
 
-NODE_DISPLAY_NAME_MAPPINGS = {"SBTools_AlphaToChromaKey": "Alpha to Chroma Key (SBTools)"}
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "SBTools_AlphaToChromaKey": "Alpha to Chroma Key (SBTools)"
+}

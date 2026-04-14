@@ -232,10 +232,24 @@ class BiRefNetModel:
             aspect_mode = params.get("aspect_mode", "square")
             process_res = params["process_res"]
 
+            orig_image = tensor2pil(image)
+            w, h = orig_image.size
+
             if aspect_mode == "preserve":
-                # Preserve aspect ratio: resize longest side to process_res
+                # Preserve aspect ratio: resize to fit within process_res, ensuring dimensions are multiples of 32
+                max_side = max(w, h)
+                scale = process_res / max_side
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                # Round to nearest multiple of 32
+                new_w = (new_w // 32) * 32
+                new_h = (new_h // 32) * 32
+                # Ensure minimum size
+                new_w = max(new_w, 32)
+                new_h = max(new_h, 32)
+
                 resize_transform = transforms.Resize(
-                    process_res,
+                    (new_h, new_w),
                     interpolation=transforms.InterpolationMode.BICUBIC,
                 )
             else:
@@ -252,9 +266,6 @@ class BiRefNetModel:
                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                 ]
             )
-
-            orig_image = tensor2pil(image)
-            w, h = orig_image.size
 
             input_tensor = transform_image(orig_image).unsqueeze(0).to(device).half()
 
