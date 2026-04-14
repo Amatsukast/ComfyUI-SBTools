@@ -301,7 +301,10 @@ class SBTools_BiRefNet:
         return {
             "required": {
                 "image": ("IMAGE", {"tooltip": tooltips["image"]}),
-                "model": (list(MODEL_CONFIG.keys()), {"tooltip": tooltips["model"]}),
+                "model": (
+                    list(MODEL_CONFIG.keys()),
+                    {"default": "BiRefNet-HR", "tooltip": tooltips["model"]},
+                ),
             },
             "optional": {
                 "mask_blur": (
