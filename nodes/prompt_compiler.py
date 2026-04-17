@@ -16,6 +16,7 @@ class SBTools_PromptCompiler:
             "index": "Index to select which Sequential combination (loops automatically)",
             "seed": "Seed for Random variables (use Primitive with increment for random batch)",
             "separator": "Separator to join values (used for unused variables and empty template mode)",
+            "var_list": "Variable list from Prompt Variable or Variable Combiner",
         }
         return {
             "required": {
@@ -56,7 +57,7 @@ class SBTools_PromptCompiler:
                 ),
             },
             "optional": {
-                "var_list": ("VARIABLE_LIST",),
+                "var_list": ("VARIABLE_LIST", {"tooltip": tooltips["var_list"]}),
             },
         }
 

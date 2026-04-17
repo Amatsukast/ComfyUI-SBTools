@@ -1,24 +1,26 @@
 # ComfyUI-SBTools
 
-**Version 1.2.0**
+**Latest Version: 1.3.0**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
 ## Nodes
 
-| Node                          | Category        | Description                                                          |
-| ----------------------------- | --------------- | -------------------------------------------------------------------- |
-| BiRefNet RemoveBG (SBTools)   | SBTools/Image   | Advanced background removal with 5 model variants                    |
-| Alpha to Chroma Key (SBTools) | SBTools/Image   | Find safe chroma key colors and fill transparent areas automatically |
-| Prompt Variable (SBTools)     | SBTools/Prompt  | Define variables with sequential or random selection modes           |
-| Variable Combiner (SBTools)   | SBTools/Prompt  | Combine multiple variable lists for unlimited expansion              |
-| Prompt Compiler (SBTools)     | SBTools/Prompt  | Generate prompts from variables with template replacement            |
+| Node                            | Category       | Description                                                              |
+| ------------------------------- | -------------- | ------------------------------------------------------------------------ |
+| BiRefNet RemoveBG (SBTools)     | SBTools/Image  | Advanced background removal with 5 model variants                        |
+| Alpha to Chroma Key (SBTools)   | SBTools/Image  | Find safe chroma key colors and fill transparent areas automatically     |
+| Prompt Variable (SBTools)       | SBTools/Prompt | Define variables with sequential or random selection modes               |
+| Image Variable Loader (SBTools) | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
+| Variable Combiner (SBTools)     | SBTools/Prompt | Combine multiple variable lists for unlimited expansion                  |
+| Prompt Compiler (SBTools)       | SBTools/Prompt | Generate prompts from variables with template replacement                |
+| Multi Compiler (SBTools)        | SBTools/Prompt | Generate prompts and load images (up to 4) for full combination workflow |
 
 ## Installation
 
-### Method 1: ComfyUI Manager (Recommended)
+### Method 1: ComfyUI Manager (Coming Soon)
 
-Search for "SBTools" in ComfyUI Manager and click Install.
+ComfyUI Manager support is in preparation. For now, please use manual installation.
 
 ### Method 2: Manual Installation
 
@@ -51,47 +53,7 @@ pip install -r requirements.txt
 
 **Step 4: Restart ComfyUI**
 
-## Updating
-
-### From v1.0.0 to v1.1.0
-
-**Important:** Node names have changed in v1.1.0. After updating:
-
-1. Run the update command (or use `install_sbtools.bat` if you have it)
-2. **Restart ComfyUI completely**
-3. **Clear browser cache** (Ctrl+Shift+R or Ctrl+F5)
-4. Old nodes (`BiRefNet`, `Find Unused Color`) will be automatically removed
-
-**Note:** The update script automatically cleans Python cache to prevent conflicts.
-
-### General Update
-
-**Step 1: Open the ComfyUI-SBTools folder**
-
-- Windows Portable: `ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-SBTools`
-- Standard: `ComfyUI\custom_nodes\ComfyUI-SBTools`
-
-**Step 2: Open terminal in this folder and pull updates**
-
-```bash
-git pull
-```
-
-**Step 3: Update dependencies**
-
-**For Windows Portable:**
-
-```bash
-..\..\..\python_embeded\python.exe -m pip install -r requirements.txt
-```
-
-**For Standard Installation (venv/conda):**
-
-```bash
-pip install -r requirements.txt
-```
-
-**Step 4: Restart ComfyUI**
+**To update:** Navigate to the `ComfyUI-SBTools` folder and run `git pull`, then update dependencies with `pip install -r requirements.txt` and restart ComfyUI.
 
 ## Usage
 
@@ -106,17 +68,20 @@ Located under `SBTools/Prompt` category. These nodes create a flexible prompt ge
 This example demonstrates the complete prompt generation workflow:
 
 **Variables defined:**
+
 - `GENDER`: man, woman (Sequential)
 - `AGE`: young, middle-aged, old (Sequential)
 - `CLOTHING`: suit, lab coat, casual wear (Sequential)
 - `ACCESSORY`: glasses, hat, [NONE] (Random with prefix " and ")
 
 **Setup:**
+
 - 4 variables combined with Variable Combiner
 - Template: `"A [AGE] [GENDER] in [CLOTHING][ACCESSORY]."`
 - Primitive node with `increment` controls the index for batch processing
 
 **Result:**
+
 - **18 sequential combinations** (2 × 3 × 3 from Sequential variables)
 - **Random accessory** selected each execution (3 choices including [NONE])
 - Example output: `"A young man in suit and glasses."`
@@ -125,23 +90,58 @@ This example demonstrates the complete prompt generation workflow:
 
 ---
 
+#### Example Workflow with Images
+
+![Variable Prompt and Image Example](examples/Variable%20Prompt%20and%20Image.png)
+
+This example demonstrates the combined text + image workflow:
+
+**Variables defined:**
+
+- `GENDER`: man, woman (Sequential)
+- `AGE`: young, middle-aged, old (Sequential)
+- `CLOTHING`: suit, lab coat, casual wear (Random)
+- `ACCESSORY`: glasses, hat, [NONE] (Random with prefix " and ")
+- **Image Variable**: body reference images from folder (Sequential)
+
+**Setup:**
+
+- 4 text variables + 1 image variable combined with Variable Combiner
+- Multi Compiler generates prompts and loads images
+- Primitive node with `increment` controls the index for batch processing
+
+**Result:**
+
+- Full combinations of text variables × image files
+- Example: 2 (gender) × 3 (age) × 3 (body images) = 18 combinations
+- Clothing and accessory are randomized for each execution
+- Each index outputs corresponding prompt + image
+
+**Download:** [Variable Prompt and Image.json](examples/Variable%20Prompt%20and%20Image.json)
+
+---
+
 #### System Overview
 
-The prompt generation system consists of three nodes that work together:
+The prompt and image generation system consists of these nodes:
 
-1. **Prompt Variable** - Define individual variables with their values
-2. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
-3. **Prompt Compiler** - Generate final prompts from variables
+1. **Prompt Variable** - Define text variables with their values
+2. **Image Variable Loader** - Load images from folder with flexible control
+3. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
+4. **Prompt Compiler** - Generate final prompts from text variables
+5. **Multi Compiler** - Generate prompts and load images for combined workflows
 
 #### Quick Start
 
 **Simple Example (2-3 variables):**
+
 ```
 Variable 1 (GENDER: man, woman) → Compiler
 Variable 2 (AGE: young, old)    ↗
 ```
 
 **Complex Example (7+ variables):**
+
 ```
 Variables 1-3 → Combiner A ┐
 Variables 4-6 → Combiner B ├→ Compiler
@@ -157,6 +157,7 @@ Define a single variable with multiple values. Variables can operate in two mode
 #### Parameters
 
 **Required:**
+
 - `tag_name` - Variable name for template replacement (e.g., `GENDER`, `CLOTHING`)
 - `values` - List of values, one per line
   - Use empty line or `[NONE]` for "no value" option
@@ -165,6 +166,7 @@ Define a single variable with multiple values. Variables can operate in two mode
   - **ON (Random)**: Pick one value randomly each execution
 
 **Optional:**
+
 - `prefix` - Text added before the value (only in template mode)
 - `suffix` - Text added after the value (only in template mode)
 
@@ -175,6 +177,7 @@ Define a single variable with multiple values. Variables can operate in two mode
 #### Examples
 
 **Basic variable:**
+
 ```
 tag_name: "GENDER"
 values: "man\nwoman"
@@ -182,6 +185,7 @@ randomize: OFF
 ```
 
 **With prefix/suffix:**
+
 ```
 tag_name: "ACCESSORY"
 values: "glasses\nhat\n[NONE]"
@@ -198,6 +202,7 @@ Combine multiple variable lists into one. Useful for organizing complex prompts 
 #### Parameters
 
 **Optional:**
+
 - `var_list1` to `var_list6` - Variable lists from Variable nodes or other Combiners
 
 #### Output
@@ -207,6 +212,7 @@ Combine multiple variable lists into one. Useful for organizing complex prompts 
 #### Usage
 
 **Organize by category:**
+
 ```
 Character variables (3) → Combiner A ┐
 Clothing variables (3)  → Combiner B ├→ Combiner C → Compiler
@@ -214,9 +220,68 @@ Scene variables (2)     → Combiner C ┘
 ```
 
 **Chain for unlimited expansion:**
+
 - Each Combiner supports 6 inputs
 - Connect Combiner outputs to other Combiners
 - No limit on total number of variables
+
+---
+
+### Image Variable Loader
+
+Load images from a folder with flexible control. Can be used standalone or combined with text variables for full workflow generation.
+
+#### Parameters
+
+**Required:**
+
+- `folder_path` - Path to folder containing images (absolute or relative)
+- `pattern` - File pattern for glob matching (e.g., `*.png`, `body_*.jpg`)
+- `index` - Index to select which image in sequential mode (loops automatically)
+- `randomize` - Toggle between modes:
+  - **OFF (Sequential)**: Cycle through images by index
+  - **ON (Random)**: Pick one image randomly based on seed
+- `seed` - Seed for random selection
+
+**Optional:**
+
+- `include_subfolders` - Search in subfolders (requires `**/` in pattern, default: OFF)
+- `include_extension` - Include file extension in filename output (default: OFF)
+- `fill_background` - Fill transparent areas with solid color (default: OFF, keeps RGBA)
+- `background_color` - Background color in hex format (e.g., `#FFFFFF` for white)
+
+#### Outputs
+
+- `image` - Loaded image (IMAGE type, for standalone use)
+- `var_list` - Variable list (for Variable Combiner)
+- `total_images` - Total number of images found
+- `filename` - Current filename (with or without extension)
+
+#### Features
+
+- **Natural sort order**: Files are sorted like Windows Explorer (e.g., file1, file2, ..., file10)
+- **RGBA preservation**: Transparent images keep transparency by default
+- **Multibyte support**: Japanese and other multibyte characters in paths/filenames work correctly
+- **Dual output**: Use as standalone image loader OR as variable for combination workflows
+
+#### Examples
+
+**Standalone image loader:**
+
+```
+Image Variable Loader (folder: body_refs/, pattern: *.png)
+  ├─ image → FLUX2
+  └─ index ← Primitive (increment)
+```
+
+**Combined with text variables:**
+
+```
+Prompt Variable (GENDER) ┐
+Prompt Variable (AGE)    ├→ Variable Combiner → Multi Compiler
+Image Variable Loader    ┘                            ↓
+                                              prompt + image
+```
 
 ---
 
@@ -227,6 +292,7 @@ Generate final prompts from variables. Supports two modes automatically:
 #### Parameters
 
 **Required:**
+
 - `template` - Template text with `[TAG_NAME]` placeholders
   - Leave empty for simple join mode
   - Example: `"A [AGE] [GENDER] wearing [CLOTHING]."`
@@ -235,6 +301,7 @@ Generate final prompts from variables. Supports two modes automatically:
 - `separator` - Character(s) to join values (default: `", "`)
 
 **Optional:**
+
 - `var_list` - Variable list from Variable or Combiner node
 
 #### Outputs
@@ -246,6 +313,7 @@ Generate final prompts from variables. Supports two modes automatically:
 #### Modes
 
 **Template Mode** (template not empty):
+
 ```
 Template: "A [AGE] [GENDER] portrait."
 Variables: AGE="young", GENDER="man", CLOTHING="suit"
@@ -254,6 +322,7 @@ Variables: AGE="young", GENDER="man", CLOTHING="suit"
 ```
 
 **Simple Join Mode** (template empty):
+
 ```
 Template: ""
 Variables: AGE="young", GENDER="man", CLOTHING="suit"
@@ -263,16 +332,19 @@ Variables: AGE="young", GENDER="man", CLOTHING="suit"
 #### Sequential vs Random
 
 **Sequential variables:**
+
 - All combinations calculated with `itertools.product`
 - `index` parameter selects which combination
 - Use Primitive node with `increment` to cycle through all
 
 **Random variables:**
+
 - One value selected randomly per execution
 - `seed` parameter controls randomness
 - Use Primitive node with `increment` on seed for variation
 
 **Example:**
+
 ```
 2 Sequential vars (man/woman × young/old) = 4 combinations
 1 Random var (3 accessories) = random each time
@@ -282,6 +354,7 @@ Variables: AGE="young", GENDER="man", CLOTHING="suit"
 #### Tips
 
 **For FLUX.2 JSON-style prompts:**
+
 ```json
 {
   "subject": "[SUBJECT]",
@@ -292,14 +365,86 @@ Variables: AGE="young", GENDER="man", CLOTHING="suit"
 ```
 
 **For natural language:**
+
 ```
 "A [AGE] [GENDER] [CLOTHING][ACCESSORY], [BACKGROUND], [LIGHTING]"
 ```
 
 **Batch processing:**
+
 - Connect Primitive (INT, increment) to `index` for sequential patterns
 - Connect Primitive (INT, increment) to `seed` for random variations
 - Use `max_combinations` to know total patterns
+
+---
+
+### Multi Compiler
+
+Extended version of Prompt Compiler that supports image variables. Generate prompts and load images simultaneously for complete combination workflows.
+
+#### Parameters
+
+**Required:**
+
+- `template` - Template text with `[TAG_NAME]` tags (same as Prompt Compiler)
+- `index` - Index to select which Sequential combination (loops automatically)
+- `seed` - Seed for Random **TEXT** variables (Image Variables have independent seeds)
+- `separator` - Character(s) to join values (default: `", "`)
+
+**Optional:**
+
+- `var_list` - Variable list from Prompt Variable, Image Variable Loader, or Variable Combiner
+
+#### Outputs
+
+- `prompt` - Generated prompt text (STRING)
+- `image1` - First image (IMAGE)
+- `image2` - Second image (IMAGE)
+- `image3` - Third image (IMAGE)
+- `image4` - Fourth image (IMAGE)
+- `max_combinations` - Total number of sequential combinations (INT)
+- `all_combinations` - Debug output with 2-line format (prompt + images)
+
+#### Features
+
+- **Up to 4 images**: Perfect for FLUX.2 Reference workflow with multiple reference images
+- **Independent seed control**: Each Image Variable uses its own seed, text variables use Multi Compiler's seed
+- **Full combination calculation**: All Sequential text × Sequential images × Random variations
+- **2-line debug output**: Prompt on first line, image info on second line for clarity
+- **Empty slot handling**: Unused image slots automatically filled with blank images
+
+#### Example Workflow
+
+**For FLUX.2 Reference with multiple images:**
+
+```
+Prompt Variable (STYLE) ┐
+Prompt Variable (POSE)  ├→ Variable Combiner
+Image Variable (Body)   ┤       ↓
+Image Variable (Face)   ┘  Multi Compiler
+                                ↓
+                    prompt + image1 + image2
+                                ↓
+                           FLUX2 with
+                        Reference Latent
+```
+
+**Combination calculation:**
+
+```
+STYLE: 3 values (Sequential)
+POSE: 4 values (Sequential)
+Body images: 5 files (Sequential)
+Face images: 3 files (Sequential)
+
+Total: 3 × 4 × 5 × 3 = 180 combinations
+```
+
+#### Notes
+
+- Image Variables maintain their own randomize/seed settings even when used with Multi Compiler
+- Empty image slots (when using fewer than 4 Image Variables) output blank images
+- Use same `index` from Primitive (increment) for synchronized batch processing
 
 ---
 
@@ -501,16 +646,23 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Latest Release: v1.2.0 (2026-04-17)
+### Latest Release: v1.3.0 (2026-04-17)
 
 **New Features:**
-- Dynamic prompt generation system with 3 new nodes
-- Template-based prompt replacement with `[TAG_NAME]` syntax
-- Sequential and Random variable combination modes
-- Flexible variable management with Combiner node
-- Optimized for FLUX.2 natural language prompts
 
-**Example workflow included in `examples/` folder.**
+- **Image Variable Loader**: Load images from folder with pattern matching, natural sort, and RGBA support
+- **Multi Compiler**: Combined text + image workflow supporting up to 4 images simultaneously
+- Natural sort order (Windows Explorer compatible) for image files
+- RGBA preservation with optional background fill using hex color specification
+- Flexible file pattern matching with subfolder support
+- Full combination calculation for text variables × image variables
+- Independent seed control for each image variable
+- Multibyte character (Japanese) support for file paths
+
+**Example workflows included in `examples/` folder:**
+
+- Variable Prompt.json - Text-only prompt generation
+- Variable Prompt and Image.json - Combined text + image workflow
 
 ---
 
