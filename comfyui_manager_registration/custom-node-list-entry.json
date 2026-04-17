@@ -1,0 +1,10 @@
+{
+    "author": "Amatsukast",
+    "title": "ComfyUI-SBTools",
+    "reference": "https://github.com/Amatsukast/ComfyUI-SBTools",
+    "files": [
+        "https://github.com/Amatsukast/ComfyUI-SBTools"
+    ],
+    "install_type": "git-clone",
+    "description": "Workflow toolkit for ComfyUI. Includes BiRefNet background removal, dynamic prompt/image variable system for batch generation, chroma key tools, and more utilities."
+}
