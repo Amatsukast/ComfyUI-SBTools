@@ -1,15 +1,18 @@
 # ComfyUI-SBTools
 
-**Version 1.1.0**
+**Version 1.2.0**
 
-Custom node collection for ComfyUI. Background removal and color analysis tools.
+Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
 ## Nodes
 
-| Node                          | Category      | Description                                                          |
-| ----------------------------- | ------------- | -------------------------------------------------------------------- |
-| BiRefNet RemoveBG (SBTools)   | SBTools/Image | Advanced background removal with 5 model variants                    |
-| Alpha to Chroma Key (SBTools) | SBTools/Image | Find safe chroma key colors and fill transparent areas automatically |
+| Node                          | Category        | Description                                                          |
+| ----------------------------- | --------------- | -------------------------------------------------------------------- |
+| BiRefNet RemoveBG (SBTools)   | SBTools/Image   | Advanced background removal with 5 model variants                    |
+| Alpha to Chroma Key (SBTools) | SBTools/Image   | Find safe chroma key colors and fill transparent areas automatically |
+| Prompt Variable (SBTools)     | SBTools/Prompt  | Define variables with sequential or random selection modes           |
+| Variable Combiner (SBTools)   | SBTools/Prompt  | Combine multiple variable lists for unlimited expansion              |
+| Prompt Compiler (SBTools)     | SBTools/Prompt  | Generate prompts from variables with template replacement            |
 
 ## Installation
 
@@ -92,7 +95,191 @@ pip install -r requirements.txt
 
 ## Usage
 
-All nodes are located under `SBTools/Image` category in ComfyUI.
+### Prompt Generation Nodes
+
+Located under `SBTools/Prompt` category. These nodes create a flexible prompt generation system optimized for FLUX.2 and other modern image generation models.
+
+#### System Overview
+
+The prompt generation system consists of three nodes that work together:
+
+1. **Prompt Variable** - Define individual variables with their values
+2. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
+3. **Prompt Compiler** - Generate final prompts from variables
+
+#### Quick Start
+
+**Simple Example (2-3 variables):**
+```
+Variable 1 (GENDER: man, woman) → Compiler
+Variable 2 (AGE: young, old)    ↗
+```
+
+**Complex Example (7+ variables):**
+```
+Variables 1-3 → Combiner A ┐
+Variables 4-6 → Combiner B ├→ Compiler
+Variable 7    ──────────────┘
+```
+
+---
+
+### Prompt Variable
+
+Define a single variable with multiple values. Variables can operate in two modes:
+
+#### Parameters
+
+**Required:**
+- `tag_name` - Variable name for template replacement (e.g., `GENDER`, `CLOTHING`)
+- `values` - List of values, one per line
+  - Use empty line or `[NONE]` for "no value" option
+- `randomize` - Toggle between modes:
+  - **OFF (Sequential)**: Cycle through all values systematically
+  - **ON (Random)**: Pick one value randomly each execution
+
+**Optional:**
+- `prefix` - Text added before the value (only in template mode)
+- `suffix` - Text added after the value (only in template mode)
+
+#### Output
+
+- `var_list` - Variable data (connect to Combiner or Compiler)
+
+#### Examples
+
+**Basic variable:**
+```
+tag_name: "GENDER"
+values: "man\nwoman"
+randomize: OFF
+```
+
+**With prefix/suffix:**
+```
+tag_name: "ACCESSORY"
+values: "glasses\nhat\n[NONE]"
+prefix: " wearing "
+randomize: ON
+```
+
+---
+
+### Variable Combiner
+
+Combine multiple variable lists into one. Useful for organizing complex prompts with many variables.
+
+#### Parameters
+
+**Optional:**
+- `var_list1` to `var_list6` - Variable lists from Variable nodes or other Combiners
+
+#### Output
+
+- `var_list` - Combined variable list
+
+#### Usage
+
+**Organize by category:**
+```
+Character variables (3) → Combiner A ┐
+Clothing variables (3)  → Combiner B ├→ Combiner C → Compiler
+Scene variables (2)     → Combiner C ┘
+```
+
+**Chain for unlimited expansion:**
+- Each Combiner supports 6 inputs
+- Connect Combiner outputs to other Combiners
+- No limit on total number of variables
+
+---
+
+### Prompt Compiler
+
+Generate final prompts from variables. Supports two modes automatically:
+
+#### Parameters
+
+**Required:**
+- `template` - Template text with `[TAG_NAME]` placeholders
+  - Leave empty for simple join mode
+  - Example: `"A [AGE] [GENDER] wearing [CLOTHING]."`
+- `index` - Which sequential combination to use (loops automatically)
+- `seed` - Seed for random variables (use Primitive node with increment for batch randomization)
+- `separator` - Character(s) to join values (default: `", "`)
+
+**Optional:**
+- `var_list` - Variable list from Variable or Combiner node
+
+#### Outputs
+
+- `prompt` - Generated prompt text
+- `max_combinations` - Total number of sequential combinations
+- `all_combinations` - Debug output showing all patterns (use with Show Text node)
+
+#### Modes
+
+**Template Mode** (template not empty):
+```
+Template: "A [AGE] [GENDER] portrait."
+Variables: AGE="young", GENDER="man", CLOTHING="suit"
+→ Output: "A young man portrait., suit"
+          (CLOTHING appended because no [CLOTHING] tag)
+```
+
+**Simple Join Mode** (template empty):
+```
+Template: ""
+Variables: AGE="young", GENDER="man", CLOTHING="suit"
+→ Output: "young, man, suit"
+```
+
+#### Sequential vs Random
+
+**Sequential variables:**
+- All combinations calculated with `itertools.product`
+- `index` parameter selects which combination
+- Use Primitive node with `increment` to cycle through all
+
+**Random variables:**
+- One value selected randomly per execution
+- `seed` parameter controls randomness
+- Use Primitive node with `increment` on seed for variation
+
+**Example:**
+```
+2 Sequential vars (man/woman × young/old) = 4 combinations
+1 Random var (3 accessories) = random each time
+→ Total: 4 sequential patterns × infinite random variations
+```
+
+#### Tips
+
+**For FLUX.2 JSON-style prompts:**
+```json
+{
+  "subject": "[SUBJECT]",
+  "background": "[BACKGROUND]",
+  "lighting": "[LIGHTING]",
+  "style": "[STYLE]"
+}
+```
+
+**For natural language:**
+```
+"A [AGE] [GENDER] [CLOTHING][ACCESSORY], [BACKGROUND], [LIGHTING]"
+```
+
+**Batch processing:**
+- Connect Primitive (INT, increment) to `index` for sequential patterns
+- Connect Primitive (INT, increment) to `seed` for random variations
+- Use `max_combinations` to know total patterns
+
+---
+
+### Image Processing Nodes
+
+All image nodes are located under `SBTools/Image` category in ComfyUI.
 
 ### BiRefNet (RemoveBG)
 
@@ -285,6 +472,35 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 ---
 
 ## Changelog
+
+### [1.2.0] - 2026-04-17
+
+#### Added
+
+- **Prompt Variable Node**: Define variables with sequential or random selection modes
+  - Support for tag-based template replacement with `[TAG_NAME]` syntax
+  - prefix/suffix support for flexible text formatting
+  - Empty value support with empty line or `[NONE]` notation
+  - Randomize toggle for easy mode switching
+- **Variable Combiner Node**: Combine multiple variable lists
+  - Support for 6 variable lists per node
+  - Chainable for unlimited variable expansion
+  - Unified `var_list` naming convention
+- **Prompt Compiler Node**: Generate prompts from variables
+  - Automatic template tag replacement mode
+  - Simple join mode when template is empty
+  - Sequential combination calculation with `itertools.product`
+  - Random variable selection with seed control
+  - Debug output showing all combinations
+  - Automatic appending of unused variables
+  - Warning system for unmatched tags
+
+#### Changed
+
+- Improved architecture: Variables output as `VARIABLE_LIST` for direct connection to Compiler
+- Optimized for FLUX.2 prompt generation with natural language templates
+
+---
 
 ### [1.1.0] - 2026-04-13
 
