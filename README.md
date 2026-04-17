@@ -99,6 +99,32 @@ pip install -r requirements.txt
 
 Located under `SBTools/Prompt` category. These nodes create a flexible prompt generation system optimized for FLUX.2 and other modern image generation models.
 
+#### Example Workflow
+
+![Variable Prompt Example](examples/Variable%20Prompt.png)
+
+This example demonstrates the complete prompt generation workflow:
+
+**Variables defined:**
+- `GENDER`: man, woman (Sequential)
+- `AGE`: young, middle-aged, old (Sequential)
+- `CLOTHING`: suit, lab coat, casual wear (Sequential)
+- `ACCESSORY`: glasses, hat, [NONE] (Random with prefix " and ")
+
+**Setup:**
+- 4 variables combined with Variable Combiner
+- Template: `"A [AGE] [GENDER] in [CLOTHING][ACCESSORY]."`
+- Primitive node with `increment` controls the index for batch processing
+
+**Result:**
+- **18 sequential combinations** (2 × 3 × 3 from Sequential variables)
+- **Random accessory** selected each execution (3 choices including [NONE])
+- Example output: `"A young man in suit and glasses."`
+
+**Download:** [Variable Prompt.json](examples/Variable%20Prompt.json)
+
+---
+
 #### System Overview
 
 The prompt generation system consists of three nodes that work together:
