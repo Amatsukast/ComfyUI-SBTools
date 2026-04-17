@@ -1,23 +1,14 @@
 [project]
 name = "comfyui-sbtools"
-version = "1.3.0"
 description = "Workflow toolkit for ComfyUI. Background removal (BiRefNet), dynamic prompt/image variable system for batch generation, chroma key tools, and more utilities."
-authors = [
-    {name = "Amatsukast", email = ""}
-]
-readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "GPL-3.0"}
-dependencies = [
-    "huggingface_hub>=0.19.0"
-]
+version = "1.3.0"
+license = {file = "LICENSE"}
+dependencies = ["huggingface_hub>=0.19.0"]
 
 [project.urls]
-Homepage = "https://github.com/Amatsukast/ComfyUI-SBTools"
 Repository = "https://github.com/Amatsukast/ComfyUI-SBTools"
-Issues = "https://github.com/Amatsukast/ComfyUI-SBTools/issues"
 
-[tool.comfyui]
+[tool.comfy]
 PublisherId = "Amatsukast"
 DisplayName = "ComfyUI-SBTools"
 Icon = ""
