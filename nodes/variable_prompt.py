@@ -6,7 +6,7 @@
 from .compiler_utils import CompilerUtils
 
 
-class SBTools_PromptVariable:
+class SBTools_VariablePrompt:
     @classmethod
     def INPUT_TYPES(cls):
         tooltips = {
@@ -188,6 +188,6 @@ class SBTools_PromptVariable:
             }
 
 
-NODE_CLASS_MAPPINGS = {"SBTools_VariablePrompt": SBTools_PromptVariable}
+NODE_CLASS_MAPPINGS = {"SBTools_VariablePrompt": SBTools_VariablePrompt}
 
 NODE_DISPLAY_NAME_MAPPINGS = {"SBTools_VariablePrompt": "Variable Prompt (SBTools)"}

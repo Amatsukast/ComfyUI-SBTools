@@ -12,7 +12,7 @@ from PIL import Image, ImageOps
 import numpy as np
 
 
-class SBTools_ImageVariable:
+class SBTools_VariableImageLoader:
     @classmethod
     def INPUT_TYPES(cls):
         tooltips = {
@@ -243,7 +243,7 @@ class SBTools_ImageVariable:
             return (255, 255, 255)
 
 
-NODE_CLASS_MAPPINGS = {"SBTools_VariableImageLoader": SBTools_ImageVariable}
+NODE_CLASS_MAPPINGS = {"SBTools_VariableImageLoader": SBTools_VariableImageLoader}
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "SBTools_VariableImageLoader": "Variable Image Loader (SBTools)"
