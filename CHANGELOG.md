@@ -5,6 +5,23 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-21
+
+### Changed
+
+- **Code organization**: Refactored file names and class names to align with node registration IDs
+  - `prompt_variable.py` → `variable_prompt.py` (class: `SBTools_VariablePrompt`)
+  - `image_variable.py` → `variable_image_loader.py` (class: `SBTools_VariableImageLoader`)
+  - `multi_compiler.py` → `variable_builder.py` (class: `SBTools_VariableBuilder`)
+  - All file names now match their node registration IDs for better code readability
+  - Updated `__init__.py` imports to reflect new file names
+
+### Technical
+
+- Node registration IDs remain unchanged, ensuring full backward compatibility
+- Existing workflow JSON files continue to work without modification
+- Improved codebase maintainability and consistency
+
 ## [1.4.0] - 2026-04-20
 
 ### Breaking Changes

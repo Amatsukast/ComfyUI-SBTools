@@ -1,6 +1,6 @@
 # ComfyUI-SBTools
 
-**Latest Version: 1.4.0**
+**Latest Version: 1.4.1**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
@@ -863,7 +863,15 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Latest Release: v1.4.0 (2026-04-20)
+### Latest Release: v1.4.1 (2026-04-21)
+
+**Code Organization:**
+
+- Refactored file names and class names to align with node registration IDs
+- Improved codebase maintainability and consistency
+- Full backward compatibility maintained (all existing workflows continue to work)
+
+**Previous Release: v1.4.0 (2026-04-20)**
 
 **New Features:**
 
