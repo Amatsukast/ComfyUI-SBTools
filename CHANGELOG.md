@@ -5,11 +5,78 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-20
+
+### Breaking Changes
+
+- **Node naming update**: All variable-related nodes renamed for better organization
+  - `Prompt Variable` → `Variable Prompt`
+  - `Image Variable Loader` → `Variable Image Loader`
+  - `Multi Compiler` → `Variable Builder`
+  - `Variable Combiner` → (unchanged)
+  - All nodes now start with "Variable" prefix for alphabetical grouping in node lists
+- **Node consolidation**: Removed Prompt Compiler and Compiler Debug nodes
+  - All functionality merged into Variable Builder
+  - Variable Builder now includes `max_combinations` and `all_combinations` outputs
+  - Old nodes backed up in `backups/`
+
+### Added
+
+- **Conditional Variable System**: Define variables that change based on previous variable values
+  - Flexible condition syntax: `[man&&suit]`, `[suit||casual]`, `[*&&suit]`
+  - Multiple syntax support: `&&`, `AND` (uppercase) for AND conditions, `||`, `OR` (uppercase) for OR conditions
+  - Full-width support: `＆＆`, `｜｜`, `：` for Japanese input compatibility
+  - Wildcard support: `[*&&suit]` for "any value + suit", `[*]` to return to common values
+  - Tag name specification: `[GENDER:man&&CLOTHING:suit]` to handle duplicate values across tags
+  - ConditionalRandom mode: Random selection within conditional context
+  - `var_list` input on Prompt Variable node enables conditional logic based on previous variables
+- **Variable Builder enhancements**: All compiler functionality unified in one node
+  - `max_combinations` output: Total number of combinations (INT)
+  - `all_combinations` output: Debug text listing all patterns with index numbers (STRING)
+  - Random variables show available choices: `[RANDOM: watch|glasses|cap]`
+  - Conditional random shows context-aware choices: `[RANDOM: glasses|watch|tie]` (for man+suit)
+  - Empty values displayed as `(none)` for clarity
+  - Template mode and simple join mode support
+  - Works for text-only, image-only, or combined workflows
+  - Performance: 10,000+ combinations enumerate quickly (under 1 second)
+- **Auto-naming for tag_name**: Leave tag_name empty for automatic unique naming
+  - Default changed from "TAG" to empty string
+  - Empty tag names automatically assigned unique IDs (`_VAR_xxxxxx`)
+  - Auto-named variables bypass duplicate checking (always allowed)
+  - Useful for simple workflows without template replacement
+- **Variable Combiner duplicate detection**:
+  - Exact duplicates (same name, values, mode) automatically skipped with info message
+  - Conflicting duplicates (same name, different values) throw error and stop execution
+  - Auto-named variables (`_VAR_*`) exempt from duplicate checking
+- **Conditional variable warnings**:
+  - Warns when condition syntax doesn't match any previous variable values
+  - Shows which values will be ignored due to unmatched conditions
+  - Helps catch typos and configuration errors early
+
+### Changed
+
+- `compiler_utils.py` centralized: All compilation logic unified in single module
+- Variable Prompt now accepts optional `var_list` input for conditional variable support
+- Node names updated: all variable nodes now start with "Variable" for better organization
+
+### Technical
+
+- Condition parsing with normalization of multiple syntaxes (`&&`, `AND`, `＆＆` → `&&`, `||`, `OR`, `｜｜` → `||`)
+- Case-sensitive keyword matching (uppercase `AND`/`OR` only) to avoid conflicts with natural language
+- Full-width character support for Japanese input (`＆＆`, `｜｜`, `：`)
+- OR condition expansion into multiple condition keys using `itertools.product`
+- Lazy evaluation for conditional variable resolution based on current context
+- Recursive combination enumeration for accurate total calculation
+
+### Fixed
+
+- Fixed typo in Compiler Debug node image conversion (`convert` → `img.convert`)
+
 ## [1.3.0] - 2026-04-17
 
 ### Added
 
-- **Image Variable Loader Node**: Load images from folder with flexible control
+- **Variable Image Loader Node**: Load images from folder with flexible control
   - Folder path specification with glob pattern matching (e.g., `*.png`, `body_*.jpg`)
   - Sequential and Random selection modes with index/seed control
   - Natural sort order (Windows Explorer compatible) for human-friendly numbering
@@ -32,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Image Variable Loader: Default filename output without extension for cleaner display
+- Variable Image Loader: Default filename output without extension for cleaner display
 
 ### Technical
 

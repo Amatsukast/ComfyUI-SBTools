@@ -1,28 +1,28 @@
 {
-  "id": "3f82a1df-5996-43e1-8370-748137fe3934",
+  "id": "690c254e-743a-4d0c-ba50-72e60185c78b",
   "revision": 0,
-  "last_node_id": 51,
-  "last_link_id": 144,
+  "last_node_id": 44,
+  "last_link_id": 182,
   "nodes": [
     {
-      "id": 5,
+      "id": 7,
       "type": "PreviewAny",
       "pos": [
         2120,
-        200
+        380
       ],
       "size": [
         400,
         120
       ],
       "flags": {},
-      "order": 11,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
           "name": "source",
           "type": "*",
-          "link": 121
+          "link": 149
         }
       ],
       "outputs": [],
@@ -38,61 +38,24 @@
       ]
     },
     {
-      "id": 3,
-      "type": "SBTools_PromptVariable",
+      "id": 6,
+      "type": "PreviewAny",
       "pos": [
-        960,
-        460
+        2120,
+        560
       ],
       "size": [
         400,
-        200
+        240
       ],
       "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "var_list",
-          "type": "VARIABLE_LIST",
-          "links": [
-            92
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "a503865524260566660f89ee3bf4f58b3c6372e2",
-        "Node name for S&R": "SBTools_PromptVariable"
-      },
-      "widgets_values": [
-        "AGE",
-        "young\nmiddle-aged\nold",
-        false,
-        "",
-        ""
-      ]
-    },
-    {
-      "id": 34,
-      "type": "PreviewAny",
-      "pos": [
-        1740,
-        1420
-      ],
-      "size": [
-        300,
-        120
-      ],
-      "flags": {},
-      "order": 9,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
           "name": "source",
           "type": "*",
-          "link": 142
+          "link": 150
         }
       ],
       "outputs": [],
@@ -119,38 +82,38 @@
         140
       ],
       "flags": {},
-      "order": 7,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
           "name": "var_list1",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 91
+          "link": 175
         },
         {
           "name": "var_list2",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 92
+          "link": 176
         },
         {
           "name": "var_list3",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 93
+          "link": 180
         },
         {
           "name": "var_list4",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 136
+          "link": null
         },
         {
           "name": "var_list5",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 140
+          "link": null
         },
         {
           "name": "var_list6",
@@ -164,7 +127,7 @@
           "name": "var_list",
           "type": "VARIABLE_LIST",
           "links": [
-            129
+            147
           ]
         }
       ],
@@ -176,84 +139,10 @@
       "widgets_values": []
     },
     {
-      "id": 4,
-      "type": "SBTools_PromptVariable",
+      "id": 37,
+      "type": "SBTools_VariablePrompt",
       "pos": [
-        960,
-        720
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "var_list",
-          "type": "VARIABLE_LIST",
-          "links": [
-            93
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "a503865524260566660f89ee3bf4f58b3c6372e2",
-        "Node name for S&R": "SBTools_PromptVariable"
-      },
-      "widgets_values": [
-        "CLOTHING",
-        "suit\nlab coat\ncasual wear",
-        true,
-        "",
-        ""
-      ]
-    },
-    {
-      "id": 12,
-      "type": "SBTools_PromptVariable",
-      "pos": [
-        960,
-        980
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "var_list",
-          "type": "VARIABLE_LIST",
-          "links": [
-            136
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "a503865524260566660f89ee3bf4f58b3c6372e2",
-        "Node name for S&R": "SBTools_PromptVariable"
-      },
-      "widgets_values": [
-        "ACCESSORY",
-        "glasses\nhat\n[NONE]",
-        true,
-        " and ",
-        ""
-      ]
-    },
-    {
-      "id": 1,
-      "type": "SBTools_PromptVariable",
-      "pos": [
-        960,
+        520,
         200
       ],
       "size": [
@@ -261,22 +150,29 @@
         200
       ],
       "flags": {},
-      "order": 3,
+      "order": 0,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "var_list",
           "type": "VARIABLE_LIST",
           "links": [
-            91
+            174
           ]
         }
       ],
       "properties": {
         "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "a503865524260566660f89ee3bf4f58b3c6372e2",
-        "Node name for S&R": "SBTools_PromptVariable"
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
       },
       "widgets_values": [
         "GENDER",
@@ -288,7 +184,214 @@
     },
     {
       "id": 38,
-      "type": "SBTools_MultiCompiler",
+      "type": "SBTools_VariablePrompt",
+      "pos": [
+        960,
+        200
+      ],
+      "size": [
+        400,
+        280
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 174
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var_list",
+          "type": "VARIABLE_LIST",
+          "links": [
+            175
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
+      },
+      "widgets_values": [
+        "CLOTHING",
+        "suit\ncasual wear\nsportswear\n\n[man]\ntuxedo\n\n[woman]\ndress\n",
+        false,
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 43,
+      "type": "PreviewImage",
+      "pos": [
+        2120,
+        860
+      ],
+      "size": [
+        300,
+        380
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 181
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 42,
+      "type": "SBTools_VariableImageLoader",
+      "pos": [
+        1040,
+        880
+      ],
+      "size": [
+        320,
+        340
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "var_list",
+          "type": "VARIABLE_LIST",
+          "links": [
+            180
+          ]
+        },
+        {
+          "name": "total_images",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "filename",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariableImageLoader"
+      },
+      "widgets_values": [
+        "C:\\images\\body",
+        "*",
+        0,
+        false,
+        349419845,
+        "randomize",
+        false,
+        false,
+        false,
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": 39,
+      "type": "SBTools_VariablePrompt",
+      "pos": [
+        960,
+        540
+      ],
+      "size": [
+        400,
+        280
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var_list",
+          "type": "VARIABLE_LIST",
+          "links": [
+            176
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
+      },
+      "widgets_values": [
+        "ACCESSORY",
+        "watch\nglasses\n[NONE]",
+        true,
+        "with ",
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PreviewAny",
+      "pos": [
+        2120,
+        200
+      ],
+      "size": [
+        400,
+        120
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 148
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 41,
+      "type": "SBTools_VariableBuilder",
       "pos": [
         1680,
         200
@@ -298,14 +401,14 @@
         320
       ],
       "flags": {},
-      "order": 10,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
           "name": "var_list",
           "shape": 7,
           "type": "VARIABLE_LIST",
-          "link": 129
+          "link": 147
         },
         {
           "name": "index",
@@ -313,7 +416,7 @@
           "widget": {
             "name": "index"
           },
-          "link": 130
+          "link": 151
         }
       ],
       "outputs": [
@@ -321,278 +424,58 @@
           "name": "prompt",
           "type": "STRING",
           "links": [
-            121
+            148
           ]
         },
         {
           "name": "image1",
           "type": "IMAGE",
           "links": [
-            128
+            181
           ]
         },
         {
           "name": "image2",
           "type": "IMAGE",
-          "links": []
+          "links": null
         },
         {
           "name": "image3",
           "type": "IMAGE",
-          "links": []
+          "links": null
         },
         {
           "name": "image4",
           "type": "IMAGE",
-          "links": []
+          "links": null
         },
         {
           "name": "max_combinations",
           "type": "INT",
           "links": [
-            122
+            149
           ]
         },
         {
           "name": "all_combinations",
           "type": "STRING",
           "links": [
-            144
+            150
           ]
         }
       ],
       "properties": {
         "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "1faafe6ca0f20b237448e70ce455358c9f8e071c",
-        "Node name for S&R": "SBTools_MultiCompiler"
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariableBuilder"
       },
       "widgets_values": [
-        "",
+        "A [GENDER] in [CLOTHING] [ACCESSORY].\nBody shape and pose from image 1.",
         0,
-        754521359,
+        3387510610,
         "randomize",
         ", "
       ]
-    },
-    {
-      "id": 33,
-      "type": "PreviewAny",
-      "pos": [
-        1740,
-        1240
-      ],
-      "size": [
-        300,
-        120
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "source",
-          "type": "*",
-          "link": 141
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.18.2",
-        "Node name for S&R": "PreviewAny"
-      },
-      "widgets_values": [
-        null,
-        null,
-        null
-      ]
-    },
-    {
-      "id": 50,
-      "type": "SBTools_ImageVariable",
-      "pos": [
-        1040,
-        1240
-      ],
-      "size": [
-        320,
-        340
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            139
-          ]
-        },
-        {
-          "name": "var_list",
-          "type": "VARIABLE_LIST",
-          "links": [
-            140
-          ]
-        },
-        {
-          "name": "total_images",
-          "type": "INT",
-          "links": [
-            141
-          ]
-        },
-        {
-          "name": "filename",
-          "type": "STRING",
-          "links": [
-            142
-          ]
-        }
-      ],
-      "properties": {
-        "aux_id": "Amatsukast/ComfyUI-SBTools",
-        "ver": "1faafe6ca0f20b237448e70ce455358c9f8e071c",
-        "Node name for S&R": "SBTools_ImageVariable"
-      },
-      "widgets_values": [
-        "C:\\Users\\casual_common\\Desktop\\body",
-        "*",
-        0,
-        false,
-        4239421657,
-        "randomize",
-        false,
-        false,
-        false,
-        "#FFFFFF"
-      ]
-    },
-    {
-      "id": 6,
-      "type": "PreviewAny",
-      "pos": [
-        2120,
-        940
-      ],
-      "size": [
-        400,
-        620
-      ],
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "source",
-          "type": "*",
-          "link": 144
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.18.2",
-        "Node name for S&R": "PreviewAny"
-      },
-      "widgets_values": [
-        null,
-        null,
-        null
-      ]
-    },
-    {
-      "id": 32,
-      "type": "PreviewImage",
-      "pos": [
-        2120,
-        380
-      ],
-      "size": [
-        300,
-        320
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 128
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.18.2",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 7,
-      "type": "PreviewAny",
-      "pos": [
-        2120,
-        760
-      ],
-      "size": [
-        400,
-        120
-      ],
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "source",
-          "type": "*",
-          "link": 122
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.18.2",
-        "Node name for S&R": "PreviewAny"
-      },
-      "widgets_values": [
-        null,
-        null,
-        null
-      ]
-    },
-    {
-      "id": 31,
-      "type": "PreviewImage",
-      "pos": [
-        1400,
-        1240
-      ],
-      "size": [
-        300,
-        340
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 139
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.18.2",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
     },
     {
       "id": 25,
@@ -606,7 +489,7 @@
         100
       ],
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -614,7 +497,7 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            130
+            151
           ]
         }
       ],
@@ -631,126 +514,94 @@
   ],
   "links": [
     [
-      91,
-      1,
-      0,
+      147,
       28,
+      0,
+      41,
       0,
       "VARIABLE_LIST"
     ],
     [
-      92,
-      3,
-      0,
-      28,
-      1,
-      "VARIABLE_LIST"
-    ],
-    [
-      93,
-      4,
-      0,
-      28,
-      2,
-      "VARIABLE_LIST"
-    ],
-    [
-      121,
-      38,
+      148,
+      41,
       0,
       5,
       0,
       "STRING"
     ],
     [
-      122,
-      38,
+      149,
+      41,
       5,
       7,
       0,
       "INT"
     ],
     [
-      128,
-      38,
-      1,
-      32,
+      150,
+      41,
+      6,
+      6,
       0,
-      "IMAGE"
+      "STRING"
     ],
     [
-      129,
-      28,
-      0,
-      38,
-      0,
-      "VARIABLE_LIST"
-    ],
-    [
-      130,
+      151,
       25,
       0,
-      38,
+      41,
       1,
       "INT"
     ],
     [
-      136,
-      12,
+      174,
+      37,
       0,
-      28,
-      3,
+      38,
+      0,
       "VARIABLE_LIST"
     ],
     [
-      139,
-      50,
+      175,
+      38,
       0,
-      31,
+      28,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      176,
+      39,
+      0,
+      28,
+      1,
+      "VARIABLE_LIST"
+    ],
+    [
+      180,
+      42,
+      1,
+      28,
+      2,
+      "VARIABLE_LIST"
+    ],
+    [
+      181,
+      41,
+      1,
+      43,
       0,
       "IMAGE"
-    ],
-    [
-      140,
-      50,
-      1,
-      28,
-      4,
-      "VARIABLE_LIST"
-    ],
-    [
-      141,
-      50,
-      2,
-      33,
-      0,
-      "INT"
-    ],
-    [
-      142,
-      50,
-      3,
-      34,
-      0,
-      "STRING"
-    ],
-    [
-      144,
-      38,
-      6,
-      6,
-      0,
-      "STRING"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7321166173021659,
+      "scale": 0.8529908256880734,
       "offset": [
-        -30.343062323678797,
-        22.437774881076606
+        -79.42178626742384,
+        21.666666666666742
       ]
     },
     "frontendVersion": "1.41.21",

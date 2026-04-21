@@ -1,6 +1,6 @@
 # ComfyUI-SBTools
 
-**Latest Version: 1.3.0**
+**Latest Version: 1.4.0**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
@@ -10,11 +10,10 @@ Custom node collection for ComfyUI. Background removal, color analysis, and dyna
 | ------------------------------- | -------------- | ------------------------------------------------------------------------ |
 | BiRefNet RemoveBG (SBTools)     | SBTools/Image  | Advanced background removal with 5 model variants                        |
 | Alpha to Chroma Key (SBTools)   | SBTools/Image  | Find safe chroma key colors and fill transparent areas automatically     |
-| Prompt Variable (SBTools)       | SBTools/Prompt | Define variables with sequential or random selection modes               |
-| Image Variable Loader (SBTools) | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
+| Variable Prompt (SBTools)       | SBTools/Prompt | Define variables with sequential/random/conditional selection modes      |
+| Variable Image Loader (SBTools) | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
 | Variable Combiner (SBTools)     | SBTools/Prompt | Combine multiple variable lists for unlimited expansion                  |
-| Prompt Compiler (SBTools)       | SBTools/Prompt | Generate prompts from variables with template replacement                |
-| Multi Compiler (SBTools)        | SBTools/Prompt | Generate prompts and load images (up to 4) for full combination workflow |
+| Variable Builder (SBTools)      | SBTools/Prompt | Generate prompts and load images with debug info and combination details |
 
 ## Installation
 
@@ -61,9 +60,9 @@ pip install -r requirements.txt
 
 Located under `SBTools/Prompt` category. These nodes create a flexible prompt generation system optimized for FLUX.2 and other modern image generation models.
 
-#### Example Workflow
+#### Example Workflow 1: Basic Variable Prompt
 
-![Variable Prompt Example](examples/Variable%20Prompt.png)
+![Variable Prompt Example](examples/Variable%20Prompt.webp)
 
 This example demonstrates the complete prompt generation workflow:
 
@@ -90,9 +89,9 @@ This example demonstrates the complete prompt generation workflow:
 
 ---
 
-#### Example Workflow with Images
+#### Example Workflow 2: Variable Prompt with Images
 
-![Variable Prompt and Image Example](examples/Variable%20Prompt%20and%20Image.png)
+![Variable Prompt and Image Example](examples/Variable%20Prompt%20and%20Image.webp)
 
 This example demonstrates the combined text + image workflow:
 
@@ -107,7 +106,7 @@ This example demonstrates the combined text + image workflow:
 **Setup:**
 
 - 4 text variables + 1 image variable combined with Variable Combiner
-- Multi Compiler generates prompts and loads images
+- Variable Builder generates prompts and loads images
 - Primitive node with `increment` controls the index for batch processing
 
 **Result:**
@@ -121,15 +120,116 @@ This example demonstrates the combined text + image workflow:
 
 ---
 
+#### Example Workflow 3: Conditional Variables (Basic)
+
+![Variable Prompt Conditional 1](examples/Variable%20Prompt%20Conditional_1.webp)
+
+This example demonstrates the conditional variable system:
+
+**Variables defined:**
+
+- `GENDER`: man, woman (Sequential)
+- `AGE`: young, middle-aged, old (Sequential)
+- `CLOTHING`: suit, casual (Sequential, with conditional values)
+  - Common: suit, casual
+  - `[man]`: business suit
+  - `[woman]`: dress, skirt
+  - `[*]`: sportswear (back to common)
+- `ACCESSORY`: glasses, watch, [NONE] (Random)
+
+**Setup:**
+
+- Variables connected sequentially: GENDER → AGE → CLOTHING → ACCESSORY
+- Each variable's `var_list` output connects to the next variable's `var_list` input
+- Variable Builder generates prompts based on conditional logic
+
+**Result:**
+
+- Clothing options change based on GENDER value
+- For "man": suit, casual, business suit, sportswear
+- For "woman": suit, casual, dress, skirt, sportswear
+- Total combinations automatically calculated
+
+**Download:** [Variable Prompt Conditional_1.json](examples/Variable%20Prompt%20Conditional_1.json)
+
+---
+
+#### Example Workflow 4: Conditional Variables (Advanced)
+
+![Variable Prompt Conditional 2](examples/Variable%20Prompt%20Conditional_2.webp)
+
+This example demonstrates complex conditional logic with multiple conditions:
+
+**Variables defined:**
+
+- `GENDER`: man, woman (Sequential)
+- `AGE`: young, old (Sequential)
+- `CLOTHING`: Multiple conditional sections
+  - Common values
+  - `[man]`: men's clothing
+  - `[woman]`: women's clothing
+  - `[young&&man]`: young men's casual wear
+  - `[old||woman]`: elegant clothing for old people OR women
+  - `[*]`: universal clothing items
+- `ACCESSORY`: Context-aware accessories with ConditionalRandom mode
+
+**Setup:**
+
+- Complex condition syntax: `&&` (AND), `||` (OR), `[*]` (wildcard)
+- ConditionalRandom mode: Random selection within available conditional values
+- Variable Builder shows all combinations with debug output
+
+**Result:**
+
+- Clothing dynamically filters based on GENDER and AGE
+- Example: young man → includes young men's casual wear
+- Example: woman (any age) → includes elegant clothing (OR condition matches)
+- Accessory randomly selected from context-appropriate options
+
+**Download:** [Variable Prompt Conditional_2.json](examples/Variable%20Prompt%20Conditional_2.json)
+
+---
+
+#### Example Workflow 5: Image Load from Folder
+
+![Image Load from Folder](examples/Image%20Load%20from%20Folder.webp)
+
+This example demonstrates the Variable Image Loader used as a standalone image loader:
+
+**Features:**
+
+- Load images from folder with glob pattern matching
+- Sequential and Random modes with index/seed control
+- Natural sort order (file1, file2, ..., file10)
+- Subfolder search with recursive option
+- RGBA preservation or background fill with custom color
+- Filename output with optional extension toggle
+
+**Setup:**
+
+- Variable Image Loader with folder path and pattern (e.g., `*.png`)
+- `image` output connects directly to image processing nodes
+- Primitive node with `increment` controls the index for sequential loading
+- `total_images` and `filename` outputs for debugging
+
+**Result:**
+
+- Simple image batch processing without text variables
+- Perfect for testing, preprocessing, or sequential image loading
+- Can also be used with Variable Combiner for combined workflows
+
+**Download:** [Image Load from Folder.json](examples/Image%20Load%20from%20Folder.json)
+
+---
+
 #### System Overview
 
 The prompt and image generation system consists of these nodes:
 
-1. **Prompt Variable** - Define text variables with their values
-2. **Image Variable Loader** - Load images from folder with flexible control
+1. **Variable Prompt** - Define text variables with their values
+2. **Variable Image Loader** - Load images from folder with flexible control
 3. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
-4. **Prompt Compiler** - Generate final prompts from text variables
-5. **Multi Compiler** - Generate prompts and load images for combined workflows
+4. **Variable Builder** - Generate prompts and load images with debug info
 
 #### Quick Start
 
@@ -150,25 +250,43 @@ Variable 7    ──────────────┘
 
 ---
 
-### Prompt Variable
+### Variable Prompt
 
-Define a single variable with multiple values. Variables can operate in two modes:
+Define a single variable with multiple values. Variables can operate in four modes: Sequential, Random, Conditional, and ConditionalRandom.
 
 #### Parameters
 
 **Required:**
 
 - `tag_name` - Variable name for template replacement (e.g., `GENDER`, `CLOTHING`)
+  - **Leave empty** for auto-naming (`_VAR_xxxxxx`) - useful when not using template replacement
+  - Auto-named variables are exempt from duplicate checking
 - `values` - List of values, one per line
   - Use empty line or `[NONE]` for "no value" option
+  - Use `[condition]` syntax for conditional values (see Conditional Variables below)
 - `randomize` - Toggle between modes:
-  - **OFF (Sequential)**: Cycle through all values systematically
-  - **ON (Random)**: Pick one value randomly each execution
+  - **OFF (Sequential/Conditional)**: Cycle through all values systematically
+  - **ON (Random/ConditionalRandom)**: Pick one value randomly each execution
 
 **Optional:**
 
 - `prefix` - Text added before the value (only in template mode)
 - `suffix` - Text added after the value (only in template mode)
+- `var_list` - Connect previous variable to enable conditional logic based on its values
+
+#### Important Notes
+
+**Tag Name Conflicts:**
+
+- Using the same tag name with different values in Variable Combiner will cause an error
+- To avoid conflicts, either use unique names or leave tag_name empty for auto-naming
+- Auto-named variables (`_VAR_*`) can be duplicated without conflicts
+
+**Conditional Variable Warnings:**
+
+- If a condition doesn't match any previous variable values, a warning will be displayed
+- Values following unmatched conditions will be ignored
+- Check for typos in condition syntax if you see warnings
 
 #### Output
 
@@ -192,6 +310,84 @@ values: "glasses\nhat\n[NONE]"
 prefix: " wearing "
 randomize: ON
 ```
+
+#### Conditional Variables
+
+Variables can change their available values based on previous variable values. Connect the `var_list` output from a previous variable to enable conditional logic.
+
+**Syntax:**
+
+```
+common_value1
+common_value2
+[condition]
+conditional_value1
+conditional_value2
+[*]
+back_to_common
+```
+
+**Condition Formats:**
+
+- `[man&&suit]` - AND condition: man AND suit
+  - Syntaxes: `&&`, `AND` (uppercase only), `＆＆` (full-width)
+- `[suit||casual]` - OR condition: suit OR casual
+  - Syntaxes: `||`, `OR` (uppercase only), `｜｜` (full-width)
+- `[*&&suit]` - Wildcard AND: any value AND suit (gender doesn't matter)
+- `[GENDER:man&&CLOTHING:suit]` - Tag name specification for duplicate values
+  - `:` for tag specification (also supports full-width `：`)
+- `[*]` - Return to common values (end conditional section)
+
+**Example Workflow:**
+
+```
+Variable 1 (GENDER):
+  man
+  woman
+
+Variable 2 (CLOTHING) - var_list connected to Variable 1:
+  suit
+  casual
+  [woman]
+  dress
+  [*]
+  sportswear
+```
+
+**Result:**
+
+- If GENDER = "man": Available = suit, casual, sportswear
+- If GENDER = "woman": Available = suit, casual, dress, sportswear
+
+**With Random Mode:**
+
+Set `randomize: ON` on the conditional variable to enable ConditionalRandom mode. The system will:
+
+1. Determine available values based on current conditions
+2. Randomly select one from the available set
+
+**Complex Conditions:**
+
+```
+Variable 1 (GENDER): man, woman
+Variable 2 (AGE): young, old
+Variable 3 (CLOTHING):
+  suit
+  casual
+  [man&&young]
+  hoodie
+  [woman||old]
+  elegant dress
+  [*]
+  sportswear
+```
+
+**Result:**
+
+- man + young: suit, casual, hoodie, sportswear
+- man + old: suit, casual, elegant dress, sportswear (old matches OR condition)
+- woman + young: suit, casual, elegant dress, sportswear (woman matches OR condition)
+- woman + old: suit, casual, elegant dress, sportswear (both match OR condition)
 
 ---
 
@@ -225,9 +421,30 @@ Scene variables (2)     → Combiner C ┘
 - Connect Combiner outputs to other Combiners
 - No limit on total number of variables
 
+#### Duplicate Detection
+
+Variable Combiner automatically checks for duplicate variables:
+
+**Exact duplicates** (same name, values, and mode):
+
+- Automatically skipped with info message
+- Second occurrence is ignored
+- Example: Same GENDER variable used in multiple branches
+
+**Conflicting duplicates** (same name, different values):
+
+- Throws error and stops execution
+- Must be fixed by renaming or using empty tag names
+- Example: Two different definitions of GENDER
+
+**Auto-named variables** (`_VAR_*`):
+
+- Always exempt from duplicate checking
+- Can appear multiple times without conflict
+
 ---
 
-### Image Variable Loader
+### Variable Image Loader
 
 Load images from a folder with flexible control. Can be used standalone or combined with text variables for full workflow generation.
 
@@ -269,7 +486,7 @@ Load images from a folder with flexible control. Can be used standalone or combi
 **Standalone image loader:**
 
 ```
-Image Variable Loader (folder: body_refs/, pattern: *.png)
+Variable Image Loader (folder: body_refs/, pattern: *.png)
   ├─ image → FLUX2
   └─ index ← Primitive (increment)
 ```
@@ -277,17 +494,17 @@ Image Variable Loader (folder: body_refs/, pattern: *.png)
 **Combined with text variables:**
 
 ```
-Prompt Variable (GENDER) ┐
-Prompt Variable (AGE)    ├→ Variable Combiner → Multi Compiler
-Image Variable Loader    ┘                            ↓
+Variable Prompt (GENDER) ┐
+Variable Prompt (AGE)    ├→ Variable Combiner → Variable Builder
+Variable Image Loader    ┘                            ↓
                                               prompt + image
 ```
 
 ---
 
-### Prompt Compiler
+### Variable Builder
 
-Generate final prompts from variables. Supports two modes automatically:
+Generate prompts and load images with full debug information. Supports text-only workflows, image workflows, or combined workflows.
 
 #### Parameters
 
@@ -296,121 +513,40 @@ Generate final prompts from variables. Supports two modes automatically:
 - `template` - Template text with `[TAG_NAME]` placeholders
   - Leave empty for simple join mode
   - Example: `"A [AGE] [GENDER] wearing [CLOTHING]."`
-- `index` - Which sequential combination to use (loops automatically)
-- `seed` - Seed for random variables (use Primitive node with increment for batch randomization)
-- `separator` - Character(s) to join values (default: `", "`)
-
-**Optional:**
-
-- `var_list` - Variable list from Variable or Combiner node
-
-#### Outputs
-
-- `prompt` - Generated prompt text
-- `max_combinations` - Total number of sequential combinations
-- `all_combinations` - Debug output showing all patterns (use with Show Text node)
-
-#### Modes
-
-**Template Mode** (template not empty):
-
-```
-Template: "A [AGE] [GENDER] portrait."
-Variables: AGE="young", GENDER="man", CLOTHING="suit"
-→ Output: "A young man portrait., suit"
-          (CLOTHING appended because no [CLOTHING] tag)
-```
-
-**Simple Join Mode** (template empty):
-
-```
-Template: ""
-Variables: AGE="young", GENDER="man", CLOTHING="suit"
-→ Output: "young, man, suit"
-```
-
-#### Sequential vs Random
-
-**Sequential variables:**
-
-- All combinations calculated with `itertools.product`
-- `index` parameter selects which combination
-- Use Primitive node with `increment` to cycle through all
-
-**Random variables:**
-
-- One value selected randomly per execution
-- `seed` parameter controls randomness
-- Use Primitive node with `increment` on seed for variation
-
-**Example:**
-
-```
-2 Sequential vars (man/woman × young/old) = 4 combinations
-1 Random var (3 accessories) = random each time
-→ Total: 4 sequential patterns × infinite random variations
-```
-
-#### Tips
-
-**For FLUX.2 JSON-style prompts:**
-
-```json
-{
-  "subject": "[SUBJECT]",
-  "background": "[BACKGROUND]",
-  "lighting": "[LIGHTING]",
-  "style": "[STYLE]"
-}
-```
-
-**For natural language:**
-
-```
-"A [AGE] [GENDER] [CLOTHING][ACCESSORY], [BACKGROUND], [LIGHTING]"
-```
-
-**Batch processing:**
-
-- Connect Primitive (INT, increment) to `index` for sequential patterns
-- Connect Primitive (INT, increment) to `seed` for random variations
-- Use `max_combinations` to know total patterns
-
----
-
-### Multi Compiler
-
-Extended version of Prompt Compiler that supports image variables. Generate prompts and load images simultaneously for complete combination workflows.
-
-#### Parameters
-
-**Required:**
-
-- `template` - Template text with `[TAG_NAME]` tags (same as Prompt Compiler)
 - `index` - Index to select which Sequential combination (loops automatically)
 - `seed` - Seed for Random **TEXT** variables (Image Variables have independent seeds)
 - `separator` - Character(s) to join values (default: `", "`)
 
 **Optional:**
 
-- `var_list` - Variable list from Prompt Variable, Image Variable Loader, or Variable Combiner
+- `var_list` - Variable list from Variable Prompt, Variable Image Loader, or Variable Combiner
 
 #### Outputs
 
 - `prompt` - Generated prompt text (STRING)
-- `image1` - First image (IMAGE)
-- `image2` - Second image (IMAGE)
-- `image3` - Third image (IMAGE)
-- `image4` - Fourth image (IMAGE)
+- `image1-4` - Loaded images (IMAGE × 4, empty if no image variables)
 - `max_combinations` - Total number of sequential combinations (INT)
-- `all_combinations` - Debug output with 2-line format (prompt + images)
+- `all_combinations` - Debug text listing all patterns with index numbers (STRING)
+
+#### Modes
+
+**Template Mode** (template not empty):
+
+- Tags like `[TAG_NAME]` are replaced with values
+- Unused variables are appended at the end
+
+**Simple Join Mode** (template empty):
+
+- All values are joined with separator
 
 #### Features
 
+- **Text-only or image workflows**: Works with any combination of text and image variables
 - **Up to 4 images**: Perfect for FLUX.2 Reference workflow with multiple reference images
-- **Independent seed control**: Each Image Variable uses its own seed, text variables use Multi Compiler's seed
+- **Independent seed control**: Each Image Variable uses its own seed, text variables use Variable Builder's seed
 - **Full combination calculation**: All Sequential text × Sequential images × Random variations
-- **2-line debug output**: Prompt on first line, image info on second line for clarity
+- **Debug output**: `max_combinations` shows total patterns, `all_combinations` lists all with index
+- **Random preview**: Shows `[RANDOM: choice1|choice2|...]` for random variables in debug output
 - **Empty slot handling**: Unused image slots automatically filled with blank images
 
 #### Example Workflow
@@ -418,10 +554,10 @@ Extended version of Prompt Compiler that supports image variables. Generate prom
 **For FLUX.2 Reference with multiple images:**
 
 ```
-Prompt Variable (STYLE) ┐
-Prompt Variable (POSE)  ├→ Variable Combiner
-Image Variable (Body)   ┤       ↓
-Image Variable (Face)   ┘  Multi Compiler
+Variable Prompt (STYLE) ┐
+Variable Prompt (POSE)  ├→ Variable Combiner
+Variable Image (Body)   ┤       ↓
+Variable Image (Face)   ┘  Variable Builder
                                 ↓
                     prompt + image1 + image2
                                 ↓
@@ -440,17 +576,76 @@ Face images: 3 files (Sequential)
 Total: 3 × 4 × 5 × 3 = 180 combinations
 ```
 
-#### Notes
+#### Tips
 
-- Image Variables maintain their own randomize/seed settings even when used with Multi Compiler
-- Empty image slots (when using fewer than 4 Image Variables) output blank images
+**Batch processing:**
+
+- Connect Primitive (INT, increment) to `index` for sequential patterns
+- Connect Primitive (INT, increment) to `seed` for random variations
+- Use `max_combinations` output to know total patterns
+- Connect `all_combinations` to Show Text node to see all patterns
+
+**For FLUX.2 JSON-style prompts:**
+
+```json
+{
+  "subject": "[SUBJECT]",
+  "background": "[BACKGROUND]",
+  "lighting": "[LIGHTING]",
+  "style": "[STYLE]"
+}
+```
+
+**For natural language:**
+
+```
+"A [AGE] [GENDER] [CLOTHING][ACCESSORY], [BACKGROUND], [LIGHTING]"
+```
+
+**Notes:**
+
+- Image Variables maintain their own randomize/seed settings
+- Empty image slots output blank images when using fewer than 4 Image Variables
 - Use same `index` from Primitive (increment) for synchronized batch processing
+- Performance: 10,000+ combinations enumerate quickly (under 1 second)
 
 ---
 
 ### Image Processing Nodes
 
 All image nodes are located under `SBTools/Image` category in ComfyUI.
+
+#### Example Workflow: Background Removal and Chroma Key Fill
+
+![Remove BG and Fill BG Example](examples/Remove%20BG%20and%20Fill%20BG.webp)
+
+This example demonstrates the complete background removal and chroma key workflow:
+
+**Workflow:**
+
+1. **BiRefNet RemoveBG** - Removes background and creates transparent PNG
+2. **Alpha to Chroma Key** - Finds unused color safe for chroma keying
+3. **Filled image output** - Automatically fills transparent areas with the detected color
+
+**Features:**
+
+- Automatic safe color detection that doesn't conflict with foreground
+- One-click background fill for chroma key compositing
+- Perfect for video editing software that requires solid backgrounds
+- Color visualization output shows the detected color
+
+![Detected Chroma Key Color](examples/Clolor_01.png)
+
+**Use Case:**
+
+- Remove background from photos/renders
+- Prepare images for video editing (After Effects, Premiere, DaVinci Resolve)
+- Create green screen / blue screen equivalents with optimal colors
+- Avoid color conflicts with subject colors
+
+**Download:** [Remove BG and Fill BG.json](examples/Remove%20BG%20and%20Fill%20BG.json)
+
+---
 
 ### BiRefNet (RemoveBG)
 
@@ -541,21 +736,24 @@ Advanced background removal using BiRefNet models. Supports multiple model varia
 
 ---
 
-### Find Unused Color
+### Alpha to Chroma Key
 
-Finds a color in your image that is maximally different from all existing colors. Useful for chroma keying, masking, or creating selection areas.
+Finds a color in your image that is maximally different from all existing colors, and automatically fills transparent areas with that color. Perfect for chroma keying workflows in video editing.
+
+**See it in action:** [Background Removal and Chroma Key Fill Example](#example-workflow-background-removal-and-chroma-key-fill)
 
 #### Use Cases
 
-- **Chroma key backgrounds** - Find a color that won't interfere with your subject
+- **Chroma key backgrounds** - Find a color that won't interfere with your subject and fill transparent areas
+- **Video editing preparation** - Create solid backgrounds for After Effects, Premiere, DaVinci Resolve
+- **Green screen replacement** - Generate optimal chroma key colors automatically
 - **Mask generation** - Create temporary backgrounds for selection tools
-- **Color coding** - Identify safe colors for overlays or annotations
 
 #### Parameters
 
 **Required:**
 
-- `image` - Input image to analyze
+- `image` - Input image to analyze (typically with transparent background)
 
 **Optional:**
 
@@ -569,28 +767,47 @@ Finds a color in your image that is maximally different from all existing colors
 #### Outputs
 
 - `hex_color` - Color in hex format (e.g., #00FF00)
-- `R` - Red component (0-255)
-- `G` - Green component (0-255)
-- `B` - Blue component (0-255)
+- `filled_image` - Image with transparent areas filled with the detected color
+  - **Perfect for chroma key workflows** - transparent areas are automatically filled
+  - Output is ready for video editing software
 
 #### How It Works
 
 1. Samples random pixels from your image
 2. Tests common pure colors (green, blue, magenta, cyan, yellow, red)
 3. Returns the color with the maximum distance from all sampled pixels
-4. If no candidate meets the criteria, performs a coarse grid search
+4. Automatically fills transparent areas (alpha channel) with the detected color
+5. If no candidate meets the criteria, performs a coarse grid search
+
+#### Typical Workflow
+
+```
+Load Image → BiRefNet RemoveBG → Alpha to Chroma Key
+                                          ↓
+                                  filled_image (ready for video editing)
+                                  hex_color (for reference)
+```
+
+See the complete workflow: [Remove BG and Fill BG.json](examples/Remove%20BG%20and%20Fill%20BG.json)
 
 #### Tips
 
 **For chroma keying:**
 
-- Use `min_distance: 40-60` for safe separation
+- Use `min_distance: 40-60` for safe separation from subject colors
 - Pure green (0, 255, 0) is usually selected for typical images
+- The algorithm automatically avoids colors present in your subject
 
 **For quick results:**
 
-- Use `sample_size: 5000` (default)
+- Use `sample_size: 5000` (default) for most images
 - Increase to 10000-20000 for images with complex color palettes
+
+**For video editing:**
+
+- Use `filled_image` output directly in your video editor
+- Reference `hex_color` output if you need to adjust keying settings
+- Works with any video editing software that supports chroma keying
 
 **Distance metric:**
 
@@ -646,23 +863,42 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Latest Release: v1.3.0 (2026-04-17)
+### Latest Release: v1.4.0 (2026-04-20)
 
 **New Features:**
 
-- **Image Variable Loader**: Load images from folder with pattern matching, natural sort, and RGBA support
-- **Multi Compiler**: Combined text + image workflow supporting up to 4 images simultaneously
-- Natural sort order (Windows Explorer compatible) for image files
-- RGBA preservation with optional background fill using hex color specification
-- Flexible file pattern matching with subfolder support
-- Full combination calculation for text variables × image variables
-- Independent seed control for each image variable
-- Multibyte character (Japanese) support for file paths
+- **Conditional Variable System**: Variables that change based on previous variable values
+  - Flexible condition syntax: `[man&&suit]`, `[suit||casual]`, `[*&&suit]`
+  - Multiple syntax support: `&&`, `AND` for AND, `||`, `OR` for OR (uppercase only)
+  - Full-width support: `＆＆`, `｜｜`, `：` for Japanese input
+  - Tag name specification: `[GENDER:man&&CLOTHING:suit]` for duplicate values
+  - ConditionalRandom mode for random selection within conditional context
+- **Compiler Debug Node**: Full combination enumeration with detailed output
+  - Shows exact combination count including conditional variables
+  - Lists all patterns with index numbers
+  - Previews random choices: `[RANDOM: choice1|choice2|...]`
+  - Context-aware conditional previews
+- **Enhanced Debug Output**: Empty values shown as `(none)`, random choices displayed clearly
+
+**Previous Release: v1.3.0 (2026-04-17)**
+
+- Variable Image Loader with pattern matching and natural sort
+- Variable Builder for combined text + image workflows (up to 4 images)
+- RGBA preservation and multibyte character support
 
 **Example workflows included in `examples/` folder:**
 
-- Variable Prompt.json - Text-only prompt generation
-- Variable Prompt and Image.json - Combined text + image workflow
+**Prompt Generation:**
+
+- [Variable Prompt.json](examples/Variable%20Prompt.json) - Basic text-only prompt generation
+- [Variable Prompt and Image.json](examples/Variable%20Prompt%20and%20Image.json) - Combined text + image workflow
+- [Variable Prompt Conditional_1.json](examples/Variable%20Prompt%20Conditional_1.json) - Basic conditional variables
+- [Variable Prompt Conditional_2.json](examples/Variable%20Prompt%20Conditional_2.json) - Advanced conditional logic
+- [Image Load from Folder.json](examples/Image%20Load%20from%20Folder.json) - Standalone image loader
+
+**Image Processing:**
+
+- [Remove BG and Fill BG.json](examples/Remove%20BG%20and%20Fill%20BG.json) - Background removal with chroma key fill
 
 ---
 

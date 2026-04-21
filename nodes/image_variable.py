@@ -243,8 +243,8 @@ class SBTools_ImageVariable:
             return (255, 255, 255)
 
 
-NODE_CLASS_MAPPINGS = {"SBTools_ImageVariable": SBTools_ImageVariable}
+NODE_CLASS_MAPPINGS = {"SBTools_VariableImageLoader": SBTools_ImageVariable}
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "SBTools_ImageVariable": "Image Variable Loader (SBTools)"
+    "SBTools_VariableImageLoader": "Variable Image Loader (SBTools)"
 }
