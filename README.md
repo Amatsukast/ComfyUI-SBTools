@@ -198,6 +198,8 @@ This example demonstrates complex conditional logic with multiple conditions:
 
 #### Example Workflow 5: Conditional Image Loading
 
+![Variable Prompt and Image 2](examples/Variable%20Prompt%20and%20Image_2.webp)
+
 This example demonstrates conditional image loading with Variable Folder:
 
 **Variables defined:**
