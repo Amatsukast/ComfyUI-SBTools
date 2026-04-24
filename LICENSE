@@ -9,6 +9,11 @@ This collection includes:
 - BiRefNet models by ZhengPeng7 are licensed under Apache-2.0
   Model repository: https://huggingface.co/ZhengPeng7/BiRefNet
 
+- Guided Filter implementation: Based on guided-filter-pytorch by perrying
+  Original repository: https://github.com/perrying/guided-filter-pytorch
+  Original License: MIT License
+  Copyright (c) 2020 perrying
+
 ---
 
                     GNU GENERAL PUBLIC LICENSE
