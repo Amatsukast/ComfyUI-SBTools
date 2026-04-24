@@ -22,7 +22,7 @@ class SBTools_VariableCombiner:
         }
 
     RETURN_TYPES = ("VARIABLE_LIST",)
-    RETURN_NAMES = ("var_list",)
+    RETURN_NAMES = ("VAR_LIST",)
     FUNCTION = "combine_variables"
     CATEGORY = "SBTools/Prompt"
     OUTPUT_NODE = False
@@ -58,7 +58,9 @@ class SBTools_VariableCombiner:
 
                         if curr_key == prev_key:
                             # Exact duplicate - skip with info message
-                            print(f"\033[90m[INFO] Skipping duplicate variable '{tag_name}' (same definition)\033[0m")
+                            print(
+                                f"\033[90m[INFO] Skipping duplicate variable '{tag_name}' (same definition)\033[0m"
+                            )
                         else:
                             # Same name, different definition - ERROR
                             error_msg = (

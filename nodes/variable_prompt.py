@@ -50,7 +50,7 @@ class SBTools_VariablePrompt:
         }
 
     RETURN_TYPES = ("VARIABLE_LIST",)
-    RETURN_NAMES = ("var_list",)
+    RETURN_NAMES = ("VAR_LIST",)
     FUNCTION = "create_variable"
     CATEGORY = "SBTools/Prompt"
     OUTPUT_NODE = False

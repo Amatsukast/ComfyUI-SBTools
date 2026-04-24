@@ -3,7 +3,6 @@
 # Copyright (c) Amatsukast
 # Licensed under GPL-3.0
 
-import random
 import torch
 from PIL import Image, ImageOps
 import numpy as np
@@ -66,13 +65,13 @@ class SBTools_VariableBuilder:
 
     RETURN_TYPES = ("STRING", "IMAGE", "IMAGE", "IMAGE", "IMAGE", "INT", "STRING")
     RETURN_NAMES = (
-        "prompt",
-        "image1",
-        "image2",
-        "image3",
-        "image4",
-        "max_combinations",
-        "all_combinations",
+        "PROMPT",
+        "IMAGE1",
+        "IMAGE2",
+        "IMAGE3",
+        "IMAGE4",
+        "MAX_COMBINATIONS",
+        "ALL_COMBINATIONS",
     )
     FUNCTION = "compile"
     CATEGORY = "SBTools/Prompt"
@@ -91,13 +90,17 @@ class SBTools_VariableBuilder:
         if not variables:
             return ("", empty_image, empty_image, empty_image, empty_image, 1, "")
 
-        # Separate text and image variables
-        text_vars = [v for v in variables if v.get("type") != "Image"]
-        image_vars = [v for v in variables if v.get("type") == "Image"][:4]
+        # Separate text and image variables for output purposes
+        # Note: image_folder variables contain image paths (loaded in VariableFolder)
+        text_vars = [
+            v for v in variables if v.get("type") not in ["Image", "image_folder"]
+        ]
+        image_vars = [
+            v for v in variables if v.get("type") in ["Image", "image_folder"]
+        ][:4]
 
-        # Calculate total combinations (enumerates all)
-        all_vars = text_vars + image_vars
-        max_combinations = CompilerUtils.calculate_combinations(all_vars)
+        # Calculate total combinations using connection order (not forced text+image order)
+        max_combinations = CompilerUtils.calculate_combinations(variables)
 
         if max_combinations == 0:
             return ("", empty_image, empty_image, empty_image, empty_image, 1, "")
@@ -120,20 +123,46 @@ class SBTools_VariableBuilder:
         else:
             prompt = ""
 
-        # Resolve image paths
+        # Build current_values context for conditional image resolution
+        current_values = {}
+        if text_vars:
+            text_values = CompilerUtils.resolve_index(safe_index, text_vars, seed)
+            for var, value in zip(text_vars, text_values):
+                current_values[var["tag_name"]] = value
+
+        # Resolve image paths using full variable list for proper context
+        # Need to resolve ALL variables together to maintain correct context
+        all_values = CompilerUtils.resolve_index(safe_index, variables, seed)
+
+        # Extract image paths from the resolved values
         selected_image_paths = []
         for img_var in image_vars:
-            if img_var.get("mode") == "Random":
-                image_seed = img_var.get("seed", 0)
-                random.seed(image_seed)
-                selected_image_paths.append(random.choice(img_var["values"]))
-            else:
-                # Sequential - resolve with same index
-                img_values = CompilerUtils.resolve_index(safe_index, [img_var], seed)
-                if img_values:
-                    selected_image_paths.append(img_values[0])
+            var_name = img_var.get("tag_name", "unknown")
 
-        # Load images
+            # Find this image variable's index in variables
+            img_var_index = None
+            for i, v in enumerate(variables):
+                if v.get("tag_name") == var_name:
+                    img_var_index = i
+                    break
+
+            if img_var_index is None:
+                continue
+
+            if img_var.get("mode") in ["Random", "ConditionalRandom"]:
+                # Random/ConditionalRandom - already handled by resolve_index
+                if img_var_index < len(all_values):
+                    img_path = all_values[img_var_index]
+                    if img_path:
+                        selected_image_paths.append(img_path)
+            else:
+                # Sequential or Conditional - already resolved by resolve_index
+                if img_var_index < len(all_values):
+                    img_path = all_values[img_var_index]
+                    if img_path:
+                        selected_image_paths.append(img_path)
+
+        # Load images from Image variables
         loaded_images = []
         for i, img_path in enumerate(selected_image_paths):
             try:
@@ -156,7 +185,8 @@ class SBTools_VariableBuilder:
             loaded_images.append(empty_image)
 
         # Generate debug output (enumerates all combinations)
-        all_combinations_text = CompilerUtils.generate_all_combinations_text(text_vars)
+        # Include both text and image variables
+        all_combinations_text = CompilerUtils.generate_all_combinations_text(variables)
 
         # Also print warnings to console if present
         if text_vars and "⚠️" in all_combinations_text:

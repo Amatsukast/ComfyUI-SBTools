@@ -5,6 +5,78 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-24
+
+### Added
+
+- **Variable Folder Node**: Define conditional image folder mappings based on variable context
+  - Context-aware image loading: switch folders based on GENDER, CLOTHING, or other conditions
+  - Flexible condition syntax: `[man]`, `[man&&suit]`, `[woman||old]`, `[GENDER:man]`, `[*]`
+  - Condition options: `--random`, `--sequential` for selection mode control
+  - Path options: `--subfolder`, `--pattern=*.png`, `--extension`, `--fill-bg=#FFFFFF`
+  - Pre-loads image files from folders and passes to Variable Image Loader
+  - Warnings for unmatched conditions to catch configuration errors
+  - Auto-naming support (leave `variable_name` empty for `_IMAGE_xxxxxx`)
+- **Variable Image Loader integration**: Accept folder mappings from Variable Folder
+  - When Variable Folder is connected, folder mappings from Variable Folder are always used
+  - When Variable Folder is disconnected or bypassed, loader's own `folder_path` parameter is used
+  - Applies loader settings (randomize, seed, fill_background, etc.) to image folder variables
+- **Variable Builder enhancements**: Support for image variables from Variable Folder
+  - Resolves conditional image variables based on current context
+  - Empty image (64×64 black) when no images match the condition
+  - Multiple image variables (IMAGE1-IMAGE4) with independent configuration
+
+### Changed
+
+- **Combination calculation algorithm**: Completely rewritten from modulo-based to cumulative-based approach
+  - `resolve_index` now uses cumulative combination counts for accurate resolution
+  - New function `_count_subsequent_combinations` calculates combinations for variables after current position
+  - More accurate handling of conditional variables with unbalanced value counts
+  - Variable change order: first variable now changes slowest (cumulative approach characteristic)
+- **Variable order control**: Variables now change in connection order
+  - Order is determined by node connection sequence, not alphabetical
+  - Allows users to control which variables change faster/slower
+- **Empty value handling**: Combinations with no matching values now continue instead of being skipped
+  - Text variables: empty string `""` (ignored in prompt)
+  - Image variables: empty image 64×64 black placeholder
+  - Ensures combination count remains consistent
+
+### Fixed
+
+- **Conditional variable handling**: Fixed issues with unbalanced value counts
+  - Previous modulo-based approach caused incorrect value selection when conditions had different counts
+  - Example: `[man]:3 values, [woman]:5 values` now correctly cycles through all values
+- **Combination skipping**: Fixed bug where combinations were lost when no values matched conditions
+  - Empty values are now preserved instead of removing the combination entirely
+- **Space in condition values**: Improved parsing for condition values containing spaces
+  - Example: `[man&&casual wear]` now correctly parsed
+- **ConditionalRandom mode**: Excluded from unused condition warnings
+  - `_check_unused_conditions` now skips ConditionalRandom variables
+  - Avoids false warnings for intentionally random conditional variables
+
+### Technical
+
+- **Cumulative combination algorithm**:
+  - For each variable position, calculate total combinations of all subsequent variables
+  - Divide current index by subsequent combinations to get current variable's index
+  - More mathematically sound than modulo-based approach
+  - Slightly different performance characteristics but generally equivalent speed
+- **Image folder variable type**: New `type: "image_folder"` for variables from Variable Folder
+  - Stores folder paths and options before image loading
+  - Variable Image Loader converts to actual image paths
+- **Natural sort order**: Consistent file ordering across Variable Folder and Variable Image Loader
+  - Windows Explorer-like ordering (file1, file2, ..., file10)
+
+### Notes
+
+- **Variable change order**: Due to cumulative algorithm, first variable changes slowest
+  - This is different from previous modulo-based approach where first variable changed fastest
+  - Users can control order by adjusting node connection sequence
+- **Backward compatibility**: Existing workflows continue to work
+  - Node interfaces unchanged
+  - Only internal calculation logic changed
+  - Combination order may differ from previous versions
+
 ## [1.4.1] - 2026-04-21
 
 ### Changed

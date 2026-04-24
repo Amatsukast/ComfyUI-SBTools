@@ -1,6 +1,6 @@
 """ComfyUI-SBTools - Custom Node Collection"""
 
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 from .nodes.birefnet_node import NODE_CLASS_MAPPINGS as BIREFNET_MAPPINGS
 from .nodes.birefnet_node import NODE_DISPLAY_NAME_MAPPINGS as BIREFNET_DISPLAY
@@ -10,29 +10,47 @@ from .nodes.variable_prompt import NODE_CLASS_MAPPINGS as VARPROMPT_MAPPINGS
 from .nodes.variable_prompt import NODE_DISPLAY_NAME_MAPPINGS as VARPROMPT_DISPLAY
 from .nodes.variable_combiner import NODE_CLASS_MAPPINGS as VARCOMB_MAPPINGS
 from .nodes.variable_combiner import NODE_DISPLAY_NAME_MAPPINGS as VARCOMB_DISPLAY
+from .nodes.variable_folder import NODE_CLASS_MAPPINGS as VARFOLDER_MAPPINGS
+from .nodes.variable_folder import NODE_DISPLAY_NAME_MAPPINGS as VARFOLDER_DISPLAY
 from .nodes.variable_image_loader import NODE_CLASS_MAPPINGS as VARIMGLOADER_MAPPINGS
 from .nodes.variable_image_loader import (
     NODE_DISPLAY_NAME_MAPPINGS as VARIMGLOADER_DISPLAY,
 )
 from .nodes.variable_builder import NODE_CLASS_MAPPINGS as VARBUILDER_MAPPINGS
 from .nodes.variable_builder import NODE_DISPLAY_NAME_MAPPINGS as VARBUILDER_DISPLAY
+from .nodes.match_color import NODE_CLASS_MAPPINGS as MATCHCOLOR_MAPPINGS
+from .nodes.match_color import NODE_DISPLAY_NAME_MAPPINGS as MATCHCOLOR_DISPLAY
+from .nodes.match_color_balance import NODE_CLASS_MAPPINGS as MATCHCOLORBALANCE_MAPPINGS
+from .nodes.match_color_balance import (
+    NODE_DISPLAY_NAME_MAPPINGS as MATCHCOLORBALANCE_DISPLAY,
+)
+from .nodes.match_luminance import NODE_CLASS_MAPPINGS as MATCHLUMINANCE_MAPPINGS
+from .nodes.match_luminance import NODE_DISPLAY_NAME_MAPPINGS as MATCHLUMINANCE_DISPLAY
 
 NODE_CLASS_MAPPINGS = {
     **BIREFNET_MAPPINGS,
     **CHROMAKEY_MAPPINGS,
     **VARPROMPT_MAPPINGS,
+    **VARFOLDER_MAPPINGS,
     **VARCOMB_MAPPINGS,
     **VARIMGLOADER_MAPPINGS,
     **VARBUILDER_MAPPINGS,
+    **MATCHCOLOR_MAPPINGS,
+    **MATCHCOLORBALANCE_MAPPINGS,
+    **MATCHLUMINANCE_MAPPINGS,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     **BIREFNET_DISPLAY,
     **CHROMAKEY_DISPLAY,
     **VARPROMPT_DISPLAY,
+    **VARFOLDER_DISPLAY,
     **VARCOMB_DISPLAY,
     **VARIMGLOADER_DISPLAY,
     **VARBUILDER_DISPLAY,
+    **MATCHCOLOR_DISPLAY,
+    **MATCHCOLORBALANCE_DISPLAY,
+    **MATCHLUMINANCE_DISPLAY,
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

@@ -25,6 +25,7 @@ class SBTools_VariableImageLoader:
             "include_extension": "Include file extension in filename output",
             "fill_background": "Fill transparent areas with solid color (default: keep transparency)",
             "background_color": "Background color in hex format (e.g., #FFFFFF for white)",
+            "var_list": "Optional: Connect from VariableFolder to enable conditional image loading",
         }
         return {
             "required": {
@@ -62,6 +63,7 @@ class SBTools_VariableImageLoader:
                 ),
             },
             "optional": {
+                "var_list": ("VARIABLE_LIST", {"tooltip": tooltips["var_list"]}),
                 "include_subfolders": (
                     "BOOLEAN",
                     {"default": False, "tooltip": tooltips["include_subfolders"]},
@@ -82,7 +84,7 @@ class SBTools_VariableImageLoader:
         }
 
     RETURN_TYPES = ("IMAGE", "VARIABLE_LIST", "INT", "STRING")
-    RETURN_NAMES = ("image", "var_list", "total_images", "filename")
+    RETURN_NAMES = ("IMAGE", "VAR_LIST", "TOTAL_IMAGES", "FILENAME")
     FUNCTION = "load_image"
     CATEGORY = "SBTools/Image"
     OUTPUT_NODE = False
@@ -96,20 +98,64 @@ class SBTools_VariableImageLoader:
         index,
         seed,
         randomize,
+        var_list=None,
         include_subfolders=False,
         include_extension=False,
         fill_background=False,
         background_color="#FFFFFF",
     ):
+        # If var_list is provided, use VariableFolder mode (ignore folder_path)
+        if var_list:
+            # Check if var_list already contains image_folder variables
+            image_folder_vars = [v for v in var_list if v.get("type") == "image_folder"]
+
+            if image_folder_vars:
+                # Apply loader settings to image_folder variables
+                updated_var_list = []
+                for var in var_list:
+                    if var.get("type") == "image_folder":
+                        # Apply loader parameters to image_folder variable
+                        var_copy = var.copy()
+
+                        # Determine mode based on whether it's conditional
+                        values = var.get("values", [])
+                        is_conditional = isinstance(values, dict)
+
+                        if is_conditional:
+                            # Conditional variable
+                            var_copy["mode"] = (
+                                "ConditionalRandom" if randomize else "Conditional"
+                            )
+                        else:
+                            # Simple variable
+                            var_copy["mode"] = "Random" if randomize else "Sequential"
+
+                        var_copy["seed"] = seed
+                        var_copy["fill_background"] = fill_background
+                        var_copy["background_color"] = background_color
+
+                        updated_var_list.append(var_copy)
+                    else:
+                        updated_var_list.append(var)
+
+                empty_image = torch.zeros((1, 64, 64, 3))
+                return (
+                    empty_image,
+                    updated_var_list,
+                    0,
+                    "Settings applied to VariableFolder",
+                )
+            # else: No image_folder variables - fall through to normal mode
+
         # Get all image files
         image_paths = self._get_image_files(folder_path, pattern, include_subfolders)
 
         if not image_paths:
-            # Return empty/error state
+            # Return empty/error state (but preserve var_list)
             error_msg = f"No images found in: {folder_path} with pattern: {pattern}"
             print(f"\033[91m[ERROR] {error_msg}\033[0m")
             empty_image = torch.zeros((1, 64, 64, 3))
-            return (empty_image, [], 0, error_msg)
+            return (empty_image, var_list if var_list else [], 0, error_msg)
 
         # Select image
         if randomize:
@@ -129,11 +175,19 @@ class SBTools_VariableImageLoader:
             error_msg = f"Failed to load: {selected_path} - {str(e)}"
             print(f"\033[91m[ERROR] {error_msg}\033[0m")
             empty_image = torch.zeros((1, 64, 64, 3))
-            return (empty_image, [], len(image_paths), error_msg)
+            # Build result var_list (inherit from input if provided)
+            result_var_list = list(var_list) if var_list else []
+            return (empty_image, result_var_list, len(image_paths), error_msg)
+
+        # Auto-generate unique tag name to avoid conflicts
+        import time
+
+        unique_id = int(time.time() * 1000000) % 1000000
+        tag_name = f"_IMAGE_{unique_id}"
 
         # Create variable data for Variable Combiner
         variable_data = {
-            "tag_name": "IMAGE",  # Default tag name
+            "tag_name": tag_name,  # Auto-generated unique tag name
             "values": image_paths,  # List of all image paths
             "mode": "Random" if randomize else "Sequential",
             "type": "Image",  # Mark as image type
@@ -144,12 +198,16 @@ class SBTools_VariableImageLoader:
             "suffix": "",
         }
 
+        # Build result var_list (inherit from input if provided)
+        result_var_list = list(var_list) if var_list else []
+        result_var_list.append(variable_data)
+
         # Get filename
         filename = os.path.basename(selected_path)
         if not include_extension:
             filename = os.path.splitext(filename)[0]
 
-        return (image_tensor, [variable_data], len(image_paths), filename)
+        return (image_tensor, result_var_list, len(image_paths), filename)
 
     def _get_image_files(self, folder_path, pattern, include_subfolders=False):
         """Get sorted list of image files matching pattern."""

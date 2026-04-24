@@ -45,7 +45,7 @@ class SBTools_AlphaToChromaKey:
         }
 
     RETURN_TYPES = ("STRING", "IMAGE")
-    RETURN_NAMES = ("hex_color", "filled_image")
+    RETURN_NAMES = ("HEX_COLOR", "FILLED_IMAGE")
     FUNCTION = "process_image"
     CATEGORY = "SBTools/Image"
     OUTPUT_NODE = False

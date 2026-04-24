@@ -1,19 +1,25 @@
 # ComfyUI-SBTools
 
-**Latest Version: 1.4.1**
+**Latest Version: 1.5.0**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
 ## Nodes
 
-| Node                            | Category       | Description                                                              |
-| ------------------------------- | -------------- | ------------------------------------------------------------------------ |
-| BiRefNet RemoveBG (SBTools)     | SBTools/Image  | Advanced background removal with 5 model variants                        |
-| Alpha to Chroma Key (SBTools)   | SBTools/Image  | Find safe chroma key colors and fill transparent areas automatically     |
-| Variable Prompt (SBTools)       | SBTools/Prompt | Define variables with sequential/random/conditional selection modes      |
-| Variable Image Loader (SBTools) | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
-| Variable Combiner (SBTools)     | SBTools/Prompt | Combine multiple variable lists for unlimited expansion                  |
-| Variable Builder (SBTools)      | SBTools/Prompt | Generate prompts and load images with debug info and combination details |
+| Node                             | Category       | Description                                                              |
+| -------------------------------- | -------------- | ------------------------------------------------------------------------ |
+| BiRefNet RemoveBG (SBTools)      | SBTools/Image  | Advanced background removal with 5 model variants                        |
+| Alpha to Chroma Key (SBTools)    | SBTools/Image  | Find safe chroma key colors and fill transparent areas automatically     |
+| Variable Prompt (SBTools)        | SBTools/Prompt | Define variables with sequential/random/conditional selection modes      |
+| Variable Folder (SBTools)        | SBTools/Image  | Define conditional image folder mappings based on variable context       |
+| Variable Image Loader (SBTools)  | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
+| Variable Combiner (SBTools)      | SBTools/Prompt | Combine multiple variable lists for unlimited expansion                  |
+| Variable Builder (SBTools)       | SBTools/Prompt | Generate prompts and load images with debug info and combination details |
+| Match Color (SBTools) \*         | SBTools/Image  | Match color distribution between images (Lab/RGB/Adaptive)               |
+| Match Color Balance (SBTools) \* | SBTools/Image  | Match color temperature and tint (MKL/Shift methods)                     |
+| Match Luminance (SBTools) \*     | SBTools/Image  | Match brightness levels between images                                   |
+
+\* In development
 
 ## Installation
 
@@ -91,7 +97,7 @@ This example demonstrates the complete prompt generation workflow:
 
 #### Example Workflow 2: Variable Prompt with Images
 
-![Variable Prompt and Image Example](examples/Variable%20Prompt%20and%20Image.webp)
+![Variable Prompt and Image Example](examples/Variable%20Prompt%20and%20Image_1.webp)
 
 This example demonstrates the combined text + image workflow:
 
@@ -116,7 +122,7 @@ This example demonstrates the combined text + image workflow:
 - Clothing and accessory are randomized for each execution
 - Each index outputs corresponding prompt + image
 
-**Download:** [Variable Prompt and Image.json](examples/Variable%20Prompt%20and%20Image.json)
+**Download:** [Variable Prompt and Image_1.json](examples/Variable%20Prompt%20and%20Image_1.json)
 
 ---
 
@@ -190,7 +196,41 @@ This example demonstrates complex conditional logic with multiple conditions:
 
 ---
 
-#### Example Workflow 5: Image Load from Folder
+#### Example Workflow 5: Conditional Image Loading
+
+This example demonstrates conditional image loading with Variable Folder:
+
+**Variables defined:**
+
+- `GENDER`: man, woman (Sequential)
+- `CLOTHING`: Multiple conditional sections
+  - Common: suit, casual wear, sportswear
+  - `[man]`: tuxedo
+  - `[woman]`: dress
+- `ACCESSORY`: watch, glasses, [NONE] (Random with prefix "with ")
+- **Variable Folder (IMAGE1)**: Context-aware image folder mappings
+  - `[man]`: C:\images\body_man
+  - `[man&&casual wear]`: C:\images\body_man_casual
+  - `[woman]`: C:\images\body_woman
+
+**Setup:**
+
+- Variable Folder connected after CLOTHING variable
+- Variable Image Loader receives folder mappings from Variable Folder
+- Variable Builder generates prompts and loads images based on conditions
+
+**Result:**
+
+- Images automatically switch based on GENDER and CLOTHING context
+- Example: "man" + "casual wear" → loads from body_man_casual folder
+- Example: "woman" + "suit" → loads from body_woman folder
+- Template: "A [GENDER] in [CLOTHING] [ACCESSORY]. Body shape and pose from image 1."
+
+**Download:** [Variable Prompt and Image_2.json](examples/Variable%20Prompt%20and%20Image_2.json)
+
+---
+
+#### Example Workflow 6: Image Load from Folder
 
 ![Image Load from Folder](examples/Image%20Load%20from%20Folder.webp)
 
@@ -222,30 +262,141 @@ This example demonstrates the Variable Image Loader used as a standalone image l
 
 ---
 
+### Variable Folder
+
+Define conditional image folder mappings that change based on variable context. Works like Variable Prompt but for image folders — different conditions load images from different folders.
+
+#### Parameters
+
+**Required:**
+
+- `variable_name` - Variable name for the image (e.g., `IMAGE1`, `BODY_IMAGE`)
+  - **Leave empty** for auto-naming (`_IMAGE_xxxxxx`)
+- `folder_map` - Conditional folder definitions with syntax (see below)
+
+**Optional:**
+
+- `var_list` - Connect previous variable to enable conditional logic based on its values
+
+#### Syntax
+
+**Basic Structure:**
+
+```
+[condition] --mode_options
+folder_path1 --path_options
+folder_path2 --path_options
+
+[another_condition]
+folder_path3
+```
+
+**Condition Formats:**
+
+- `[man]` - Simple condition: matches "man"
+- `[man&&suit]` - AND condition: man AND suit
+- `[suit||casual||sportswear]` - OR condition: suit OR casual OR sportswear
+- `[GENDER:man]` - Tag specification: explicit tag for duplicate values
+- `[*]` - Return to common values (end conditional section)
+
+**Condition Options** (placed after `]`):
+
+- `--random` - Random selection within this context
+- `--sequential` - Sequential selection (default)
+
+**Path Options** (placed after folder path):
+
+- `--subfolder` - Include subfolders in search
+- `--pattern=*.png` - File pattern (e.g., `*.png`, `body_*.jpg`)
+- `--extension` - Include file extension in filename output
+- `--no-extension` - Exclude extension (default)
+- `--fill-bg=#FFFFFF` - Fill transparent areas with specified color
+- `--no-fill-bg` - Keep transparency (default)
+
+#### Example
+
+```
+[man]
+C:\images\body_man
+
+[man&&casual wear]
+C:\images\body_man_casual --subfolder
+
+[woman]
+C:\images\body_woman --pattern=*.png --fill-bg=#FFFFFF
+
+[*]
+C:\images\body_common
+```
+
+#### Workflow Connection
+
+**Important:** Variable Folder **must** be connected to Variable Image Loader to work.
+
+```
+Variable Prompt (GENDER) ┐
+Variable Prompt (CLOTHING) ├→ Variable Folder → Variable Image Loader → Variable Builder
+```
+
+**Connection Behavior:**
+
+- **Variable Folder connected**: Folder mappings from Variable Folder are always used, regardless of Variable Image Loader's `folder_path` setting
+- **Variable Folder disconnected or bypassed**: Variable Image Loader's own `folder_path` parameter becomes active
+- **No matching images**: If a condition has no matching images, that combination outputs an empty image (64×64 black image)
+
+#### Tips
+
+**Setting up conditions:**
+
+- Conditions must match values from previous variables (case-sensitive)
+- Use `var_list` connection to enable conditional logic
+- Warnings appear if conditions don't match any previous values
+
+**Organizing folders:**
+
+- Use specific conditions first, then general ones
+- Example: `[man&&casual]` before `[man]`
+- Use `[*]` to return to common folders after conditional sections
+
+**Path configuration:**
+
+- Absolute paths recommended for clarity
+- Relative paths work from ComfyUI root
+- Use `--subfolder` with `--pattern=**/*.png` for recursive search
+
+---
+
 #### System Overview
 
 The prompt and image generation system consists of these nodes:
 
 1. **Variable Prompt** - Define text variables with their values
-2. **Variable Image Loader** - Load images from folder with flexible control
-3. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
-4. **Variable Builder** - Generate prompts and load images with debug info
+2. **Variable Folder** - Define conditional image folder mappings (optional, for context-aware images)
+3. **Variable Image Loader** - Load images from folder with flexible control
+4. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
+5. **Variable Builder** - Generate prompts and load images with debug info
 
 #### Quick Start
 
 **Simple Example (2-3 variables):**
 
 ```
-Variable 1 (GENDER: man, woman) → Compiler
-Variable 2 (AGE: young, old)    ↗
+Variable Prompt (GENDER: man, woman) → Variable Builder
+Variable Prompt (AGE: young, old)    ↗
 ```
 
 **Complex Example (7+ variables):**
 
 ```
-Variables 1-3 → Combiner A ┐
-Variables 4-6 → Combiner B ├→ Compiler
-Variable 7    ──────────────┘
+Variable Prompts 1-3 → Combiner A ┐
+Variable Prompts 4-6 → Combiner B ├→ Variable Builder
+Variable Prompt 7    ──────────────┘
+```
+
+**With conditional images:**
+
+```
+Variable Prompt (GENDER) → Variable Folder (Images) → Variable Image Loader → Variable Builder
 ```
 
 ---
@@ -290,7 +441,7 @@ Define a single variable with multiple values. Variables can operate in four mod
 
 #### Output
 
-- `var_list` - Variable data (connect to Combiner or Compiler)
+- `var_list` - Variable data (connect to Variable Folder, Variable Combiner, or Variable Builder)
 
 #### Examples
 
@@ -399,7 +550,7 @@ Combine multiple variable lists into one. Useful for organizing complex prompts 
 
 **Optional:**
 
-- `var_list1` to `var_list6` - Variable lists from Variable nodes or other Combiners
+- `var_list1` to `var_list6` - Variable lists from Variable Prompt, Variable Folder, Variable Image Loader, or other Combiners
 
 #### Output
 
@@ -411,7 +562,7 @@ Combine multiple variable lists into one. Useful for organizing complex prompts 
 
 ```
 Character variables (3) → Combiner A ┐
-Clothing variables (3)  → Combiner B ├→ Combiner C → Compiler
+Clothing variables (3)  → Combiner B ├→ Combiner C → Variable Builder
 Scene variables (2)     → Combiner C ┘
 ```
 
@@ -446,13 +597,14 @@ Variable Combiner automatically checks for duplicate variables:
 
 ### Variable Image Loader
 
-Load images from a folder with flexible control. Can be used standalone or combined with text variables for full workflow generation.
+Load images from a folder with flexible control. Can be used standalone or combined with text variables for full workflow generation. When connected with Variable Folder, automatically switches to conditional image loading mode.
 
 #### Parameters
 
 **Required:**
 
 - `folder_path` - Path to folder containing images (absolute or relative)
+  - **Note**: When Variable Folder is connected, this parameter is ignored and folder mappings from Variable Folder are used instead
 - `pattern` - File pattern for glob matching (e.g., `*.png`, `body_*.jpg`)
 - `index` - Index to select which image in sequential mode (loops automatically)
 - `randomize` - Toggle between modes:
@@ -462,6 +614,7 @@ Load images from a folder with flexible control. Can be used standalone or combi
 
 **Optional:**
 
+- `var_list` - Connect from Variable Folder to enable conditional image loading
 - `include_subfolders` - Search in subfolders (requires `**/` in pattern, default: OFF)
 - `include_extension` - Include file extension in filename output (default: OFF)
 - `fill_background` - Fill transparent areas with solid color (default: OFF, keeps RGBA)
@@ -480,6 +633,21 @@ Load images from a folder with flexible control. Can be used standalone or combi
 - **RGBA preservation**: Transparent images keep transparency by default
 - **Multibyte support**: Japanese and other multibyte characters in paths/filenames work correctly
 - **Dual output**: Use as standalone image loader OR as variable for combination workflows
+- **Variable Folder integration**: When Variable Folder is connected, automatically applies conditional folder mappings
+
+#### Connection Modes
+
+**Standalone Mode** (no `var_list` connected):
+
+- Uses `folder_path` parameter to load images
+- Simple folder-based image loading
+
+**Variable Folder Mode** (`var_list` connected from Variable Folder):
+
+- Folder mappings from Variable Folder are always used
+- `folder_path` parameter is ignored
+- Images automatically switch based on variable context
+- Loader settings (`randomize`, `seed`, `fill_background`, etc.) are applied to Variable Folder configuration
 
 #### Examples
 
@@ -498,6 +666,14 @@ Variable Prompt (GENDER) ┐
 Variable Prompt (AGE)    ├→ Variable Combiner → Variable Builder
 Variable Image Loader    ┘                            ↓
                                               prompt + image
+```
+
+**Conditional image loading with Variable Folder:**
+
+```
+Variable Prompt (GENDER) → Variable Folder → Variable Image Loader → Variable Builder
+                                                     ↓
+                                            Context-aware images
 ```
 
 ---
@@ -519,7 +695,7 @@ Generate prompts and load images with full debug information. Supports text-only
 
 **Optional:**
 
-- `var_list` - Variable list from Variable Prompt, Variable Image Loader, or Variable Combiner
+- `var_list` - Variable list from Variable Prompt, Variable Folder, Variable Image Loader, or Variable Combiner
 
 #### Outputs
 
@@ -554,15 +730,23 @@ Generate prompts and load images with full debug information. Supports text-only
 **For FLUX.2 Reference with multiple images:**
 
 ```
-Variable Prompt (STYLE) ┐
-Variable Prompt (POSE)  ├→ Variable Combiner
-Variable Image (Body)   ┤       ↓
-Variable Image (Face)   ┘  Variable Builder
-                                ↓
-                    prompt + image1 + image2
-                                ↓
-                           FLUX2 with
-                        Reference Latent
+Variable Prompt (STYLE)           ┐
+Variable Prompt (POSE)            ├→ Variable Combiner
+Variable Image Loader (Body)      ┤       ↓
+Variable Image Loader (Face)      ┘  Variable Builder
+                                          ↓
+                              prompt + image1 + image2
+                                          ↓
+                                     FLUX2 with
+                                  Reference Latent
+```
+
+**With conditional images:**
+
+```
+Variable Prompt (GENDER) → Variable Folder (Body) → Variable Image Loader ┐
+Variable Prompt (POSE)                                                    ├→ Variable Combiner → Variable Builder
+Variable Image Loader (Face)                                              ┘
 ```
 
 **Combination calculation:**
@@ -863,43 +1047,53 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### Latest Release: v1.4.1 (2026-04-21)
+### Version History
 
-**Code Organization:**
+**v1.5.0 (2026-04-24)** - Conditional Image Folders
 
-- Refactored file names and class names to align with node registration IDs
-- Improved codebase maintainability and consistency
-- Full backward compatibility maintained (all existing workflows continue to work)
+- Variable Folder node for context-aware image loading
+- Enhanced combination calculation algorithm
+- Variable order control
 
-**Previous Release: v1.4.0 (2026-04-20)**
+**v1.4.1 (2026-04-21)** - Code Refactoring
 
-**New Features:**
+- File/class name alignment with node IDs
+- Improved maintainability
 
-- **Conditional Variable System**: Variables that change based on previous variable values
-  - Flexible condition syntax: `[man&&suit]`, `[suit||casual]`, `[*&&suit]`
-  - Multiple syntax support: `&&`, `AND` for AND, `||`, `OR` for OR (uppercase only)
-  - Full-width support: `＆＆`, `｜｜`, `：` for Japanese input
-  - Tag name specification: `[GENDER:man&&CLOTHING:suit]` for duplicate values
-  - ConditionalRandom mode for random selection within conditional context
-- **Compiler Debug Node**: Full combination enumeration with detailed output
-  - Shows exact combination count including conditional variables
-  - Lists all patterns with index numbers
-  - Previews random choices: `[RANDOM: choice1|choice2|...]`
-  - Context-aware conditional previews
-- **Enhanced Debug Output**: Empty values shown as `(none)`, random choices displayed clearly
+**v1.4.0 (2026-04-20)** - Conditional Variables
 
-**Previous Release: v1.3.0 (2026-04-17)**
+- Conditional variable system with AND/OR logic
+- Variable Builder with debug output
+- ConditionalRandom mode
 
-- Variable Image Loader with pattern matching and natural sort
-- Variable Builder for combined text + image workflows (up to 4 images)
-- RGBA preservation and multibyte character support
+**v1.3.0 (2026-04-17)** - Image Variables
+
+- Variable Image Loader node
+- Variable Builder for text + image workflows
+- Support for up to 4 images
+
+**v1.2.0 (2026-04-17)** - Variable System
+
+- Variable Prompt, Variable Combiner nodes
+- Template-based prompt generation
+
+**v1.1.0 (2026-04-13)** - Node Updates
+
+- Unique node names with SBTools prefix
+- Alpha to Chroma Key filled_image output
+
+**v1.0.0 (2026-04-13)** - Initial Release
+
+- BiRefNet background removal (5 models)
+- Alpha to Chroma Key node
 
 **Example workflows included in `examples/` folder:**
 
 **Prompt Generation:**
 
 - [Variable Prompt.json](examples/Variable%20Prompt.json) - Basic text-only prompt generation
-- [Variable Prompt and Image.json](examples/Variable%20Prompt%20and%20Image.json) - Combined text + image workflow
+- [Variable Prompt and Image_1.json](examples/Variable%20Prompt%20and%20Image_1.json) - Combined text + image workflow
+- [Variable Prompt and Image_2.json](examples/Variable%20Prompt%20and%20Image_2.json) - Conditional image loading with Variable Folder
 - [Variable Prompt Conditional_1.json](examples/Variable%20Prompt%20Conditional_1.json) - Basic conditional variables
 - [Variable Prompt Conditional_2.json](examples/Variable%20Prompt%20Conditional_2.json) - Advanced conditional logic
 - [Image Load from Folder.json](examples/Image%20Load%20from%20Folder.json) - Standalone image loader
