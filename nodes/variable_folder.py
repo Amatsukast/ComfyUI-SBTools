@@ -70,6 +70,10 @@ class SBTools_VariableFolder:
                 "tag_name": variable_name,
                 "type": "image_folder",  # Mark as image variable
                 "values": parsed["values"],  # {"common": [...], "conditional": {...}}
+                "exclusions": parsed.get(
+                    "exclusions", {"common": [], "conditional": {}}
+                ),
+                "only_flags": parsed.get("only_flags", {}),
                 "mode": None,  # Will be set by Variable Image Loader
                 "folder_configs": parsed["folder_configs"],  # Store folder metadata
             }
@@ -79,6 +83,10 @@ class SBTools_VariableFolder:
                 "tag_name": variable_name,
                 "type": "image_folder",
                 "values": parsed["values"],  # [...]
+                "exclusions": parsed.get(
+                    "exclusions", {"common": [], "conditional": {}}
+                ),
+                "only_flags": parsed.get("only_flags", {}),
                 "mode": None,  # Will be set by Variable Image Loader
                 "folder_configs": parsed["folder_configs"],
             }
@@ -91,10 +99,14 @@ class SBTools_VariableFolder:
         lines = folder_map_text.split("\n")
 
         common_folders = []
+        common_exclusions = []  # For --folder_path syntax
         conditional_folders = {}
+        conditional_exclusions = {}  # For --folder_path syntax in conditional blocks
+        only_flags = {}  # Store --only flags for conditions
         folder_configs = {}  # Store folder options
         has_conditions = False
         current_condition = None
+        current_is_only = False  # Track if current condition has --only
         current_mode = "Sequential"  # Default mode
         default_mode = "Sequential"
 
@@ -109,8 +121,13 @@ class SBTools_VariableFolder:
             if stripped.startswith("[") and "]" in stripped:
                 has_conditions = True
 
-                # Parse condition and options
-                condition_part, mode_option = self._parse_condition_line(stripped)
+                # Parse condition and options (including --only)
+                condition_part, mode_option, is_only = (
+                    self._parse_condition_line_with_only(stripped)
+                )
+
+                # Store the --only flag for current condition
+                current_is_only = is_only
 
                 # Normalize syntax
                 normalized = CompilerUtils.normalize_condition_syntax(condition_part)
@@ -118,9 +135,10 @@ class SBTools_VariableFolder:
                 # Parse condition
                 condition_parts = CompilerUtils.parse_condition_line(normalized)
 
-                if condition_parts == [[("*", None)]]:
+                if condition_parts == [[("*", None, False)]]:
                     # [*] = back to common
                     current_condition = None
+                    current_is_only = False
                     current_mode = mode_option if mode_option else "Sequential"
                 else:
                     # Expand OR conditions into multiple condition keys
@@ -128,6 +146,11 @@ class SBTools_VariableFolder:
                         condition_parts, previous_vars
                     )
                     current_mode = mode_option if mode_option else "Sequential"
+
+                    # If --only flag is set, store it for these conditions
+                    if current_is_only and current_condition:
+                        for cond_key in current_condition:
+                            only_flags[cond_key] = True
 
                     # Warn if condition didn't match anything
                     if not current_condition:
@@ -138,41 +161,73 @@ class SBTools_VariableFolder:
                             f"\033[93m   → Folders following this condition will be ignored\033[0m"
                         )
             else:
-                # Folder path line
-                folder_path, options = self._parse_path_line(stripped)
+                # Folder path line - check for exclusion syntax (--folder_path)
+                is_exclusion = stripped.startswith("--")
+                if is_exclusion:
+                    # Remove -- prefix
+                    folder_to_exclude = stripped[2:].strip()
 
-                if not folder_path:
-                    continue
-
-                # Store folder configuration
-                folder_configs[folder_path] = options
-
-                if current_condition is None:
-                    common_folders.append(folder_path)
+                    if current_condition is None:
+                        # Common exclusion
+                        common_exclusions.append(folder_to_exclude)
+                    else:
+                        # Conditional exclusion
+                        if isinstance(current_condition, list):
+                            if not current_condition:
+                                print(
+                                    f"\033[93m   → Ignoring exclusion: '--{folder_to_exclude}'\033[0m"
+                                )
+                            else:
+                                for cond_key in current_condition:
+                                    if cond_key not in conditional_exclusions:
+                                        conditional_exclusions[cond_key] = []
+                                    conditional_exclusions[cond_key].append(
+                                        folder_to_exclude
+                                    )
                 else:
-                    # current_condition is a list of condition keys (for OR expansion)
-                    if isinstance(current_condition, list):
-                        if not current_condition:
-                            # Empty condition - folder will be ignored
-                            print(
-                                f"\033[93m   → Ignoring folder: '{folder_path}'\033[0m"
-                            )
-                        else:
-                            # Multiple conditions (OR) - add to all
-                            for cond_key in current_condition:
-                                if cond_key not in conditional_folders:
-                                    conditional_folders[cond_key] = []
-                                conditional_folders[cond_key].append(folder_path)
+                    # Normal folder path line
+                    folder_path, options = self._parse_path_line(stripped)
+
+                    if not folder_path:
+                        continue
+
+                    # Store folder configuration
+                    folder_configs[folder_path] = options
+
+                    if current_condition is None:
+                        common_folders.append(folder_path)
+                    else:
+                        # current_condition is a list of condition keys (for OR expansion)
+                        if isinstance(current_condition, list):
+                            if not current_condition:
+                                # Empty condition - folder will be ignored
+                                print(
+                                    f"\033[93m   → Ignoring folder: '{folder_path}'\033[0m"
+                                )
+                            else:
+                                # Multiple conditions (OR) - add to all
+                                for cond_key in current_condition:
+                                    if cond_key not in conditional_folders:
+                                        conditional_folders[cond_key] = []
+                                    conditional_folders[cond_key].append(folder_path)
 
         # Convert folder paths to image paths
         common_images = []
         conditional_images = {}
+        common_image_exclusions = []  # Store image paths from excluded folders
+        conditional_image_exclusions = {}
 
         # Load images from common folders
         for folder_path in common_folders:
             config = folder_configs.get(folder_path, {})
             images = self._get_image_files_from_folder(folder_path, config)
             common_images.extend(images)
+
+        # Load images from excluded common folders (for exclusion list)
+        for folder_path in common_exclusions:
+            config = folder_configs.get(folder_path, {})
+            images = self._get_image_files_from_folder(folder_path, config)
+            common_image_exclusions.extend(images)
 
         # Load images from conditional folders
         for cond_key, folder_list in conditional_folders.items():
@@ -182,10 +237,23 @@ class SBTools_VariableFolder:
                 images = self._get_image_files_from_folder(folder_path, config)
                 conditional_images[cond_key].extend(images)
 
+        # Load images from excluded conditional folders (for exclusion list)
+        for cond_key, folder_list in conditional_exclusions.items():
+            conditional_image_exclusions[cond_key] = []
+            for folder_path in folder_list:
+                config = folder_configs.get(folder_path, {})
+                images = self._get_image_files_from_folder(folder_path, config)
+                conditional_image_exclusions[cond_key].extend(images)
+
         if has_conditions:
             return {
                 "has_conditions": True,
                 "values": {"common": common_images, "conditional": conditional_images},
+                "exclusions": {
+                    "common": common_image_exclusions,
+                    "conditional": conditional_image_exclusions,
+                },
+                "only_flags": only_flags,
                 "default_mode": default_mode,
                 "folder_configs": folder_configs,
             }
@@ -194,24 +262,35 @@ class SBTools_VariableFolder:
             return {
                 "has_conditions": False,
                 "values": common_images if common_images else [],
+                "exclusions": {"common": common_image_exclusions, "conditional": {}},
+                "only_flags": {},
                 "default_mode": default_mode,
                 "folder_configs": folder_configs,
             }
 
     def _parse_condition_line(self, line):
-        """Parse condition line and extract mode option
+        """Parse condition line and extract mode option (legacy, kept for compatibility)
 
         Input: "[man&&Military fashion] --random"
         Output: ("[man&&Military fashion]", "Random")
         """
+        condition, mode, _ = self._parse_condition_line_with_only(line)
+        return condition, mode
+
+    def _parse_condition_line_with_only(self, line):
+        """Parse condition line and extract mode and --only option
+
+        Input: "[man&&Military fashion] --random --only"
+        Output: ("[man&&Military fashion]", "Random", True)
+        """
         # Extract condition part [...]
         if not line.startswith("["):
-            return line, None
+            return line, None, False
 
         # Find closing bracket
         end_bracket = line.find("]")
         if end_bracket == -1:
-            return line, None
+            return line, None, False
 
         # Condition is everything up to and including ]
         condition = line[: end_bracket + 1]
@@ -226,7 +305,10 @@ class SBTools_VariableFolder:
         elif "--sequential" in options_part:
             mode = "Sequential"
 
-        return condition, mode
+        # Check for --only flag
+        is_only = "--only" in options_part
+
+        return condition, mode, is_only
 
     def _parse_path_line(self, line):
         """Parse path line and extract options

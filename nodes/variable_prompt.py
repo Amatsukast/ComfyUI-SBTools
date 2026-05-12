@@ -80,6 +80,10 @@ class SBTools_VariablePrompt:
             variable_data = {
                 "tag_name": tag_name,
                 "values": parsed["values"],  # {"common": [...], "conditional": {...}}
+                "exclusions": parsed.get(
+                    "exclusions", {"common": [], "conditional": {}}
+                ),
+                "only_flags": parsed.get("only_flags", {}),
                 "mode": "ConditionalRandom" if randomize else "Conditional",
                 "prefix": prefix,
                 "suffix": suffix,
@@ -89,6 +93,10 @@ class SBTools_VariablePrompt:
             variable_data = {
                 "tag_name": tag_name,
                 "values": parsed["values"],  # [...]
+                "exclusions": parsed.get(
+                    "exclusions", {"common": [], "conditional": {}}
+                ),
+                "only_flags": parsed.get("only_flags", {}),
                 "mode": "Random" if randomize else "Sequential",
                 "prefix": prefix,
                 "suffix": suffix,
@@ -98,13 +106,17 @@ class SBTools_VariablePrompt:
         return (result,)
 
     def _parse_values(self, values_text, previous_vars):
-        """Parse values text with optional conditional syntax"""
+        """Parse values text with optional conditional syntax and exclusions"""
         lines = values_text.split("\n")
 
         common = []
+        common_exclusions = []  # For --value syntax
         conditional = {}
+        conditional_exclusions = {}  # For --value syntax in conditional blocks
+        only_flags = {}  # Store --only flags for conditions
         has_conditions = False
         current_condition = None
+        current_is_only = False  # Track if current condition has --only
 
         for line in lines:
             stripped = line.strip()
@@ -126,23 +138,37 @@ class SBTools_VariablePrompt:
                 continue
 
             # Check if condition line
-            if stripped.startswith("[") and stripped.endswith("]"):
+            if stripped.startswith("[") and "]" in stripped:
                 has_conditions = True
 
+                # Parse condition line with options
+                condition_part, is_only = self._parse_condition_line_with_options(
+                    stripped
+                )
+
+                # Store the --only flag for current condition
+                current_is_only = is_only
+
                 # Normalize syntax
-                normalized = CompilerUtils.normalize_condition_syntax(stripped)
+                normalized = CompilerUtils.normalize_condition_syntax(condition_part)
 
                 # Parse condition
                 condition_parts = CompilerUtils.parse_condition_line(normalized)
 
-                if condition_parts == [[("*", None)]]:
+                if condition_parts == [[("*", None, False)]]:
                     # [*] = back to common
                     current_condition = None
+                    current_is_only = False
                 else:
                     # Expand OR conditions into multiple condition keys
                     current_condition = CompilerUtils.expand_or_conditions(
                         condition_parts, previous_vars
                     )
+
+                    # If --only flag is set, store it for these conditions
+                    if current_is_only and current_condition:
+                        for cond_key in current_condition:
+                            only_flags[cond_key] = True
 
                     # Warn if condition didn't match anything
                     if not current_condition:
@@ -153,26 +179,57 @@ class SBTools_VariablePrompt:
                             f"\033[93m   → Values following this condition will be ignored\033[0m"
                         )
             else:
-                # Value line
-                if current_condition is None:
-                    common.append(stripped)
+                # Value line - check for exclusion syntax (--value)
+                is_exclusion = stripped.startswith("--")
+                if is_exclusion:
+                    # Remove -- prefix
+                    value_to_exclude = stripped[2:].strip()
+
+                    if current_condition is None:
+                        # Common exclusion
+                        common_exclusions.append(value_to_exclude)
+                    else:
+                        # Conditional exclusion
+                        if isinstance(current_condition, list):
+                            if not current_condition:
+                                print(
+                                    f"\033[93m   → Ignoring exclusion: '--{value_to_exclude}'\033[0m"
+                                )
+                            else:
+                                for cond_key in current_condition:
+                                    if cond_key not in conditional_exclusions:
+                                        conditional_exclusions[cond_key] = []
+                                    conditional_exclusions[cond_key].append(
+                                        value_to_exclude
+                                    )
                 else:
-                    # current_condition is a list of condition keys (for OR expansion)
-                    if isinstance(current_condition, list):
-                        if not current_condition:
-                            # Empty condition - value will be ignored
-                            print(f"\033[93m   → Ignoring value: '{stripped}'\033[0m")
-                        else:
-                            # Multiple conditions (OR) - add to all
-                            for cond_key in current_condition:
-                                if cond_key not in conditional:
-                                    conditional[cond_key] = []
-                                conditional[cond_key].append(stripped)
+                    # Normal value line
+                    if current_condition is None:
+                        common.append(stripped)
+                    else:
+                        # current_condition is a list of condition keys (for OR expansion)
+                        if isinstance(current_condition, list):
+                            if not current_condition:
+                                # Empty condition - value will be ignored
+                                print(
+                                    f"\033[93m   → Ignoring value: '{stripped}'\033[0m"
+                                )
+                            else:
+                                # Multiple conditions (OR) - add to all
+                                for cond_key in current_condition:
+                                    if cond_key not in conditional:
+                                        conditional[cond_key] = []
+                                    conditional[cond_key].append(stripped)
 
         if has_conditions:
             return {
                 "has_conditions": True,
                 "values": {"common": common, "conditional": conditional},
+                "exclusions": {
+                    "common": common_exclusions,
+                    "conditional": conditional_exclusions,
+                },
+                "only_flags": only_flags,
             }
         else:
             # No conditions - return simple list
@@ -185,7 +242,37 @@ class SBTools_VariablePrompt:
                         v.strip() for v in lines if v.strip() and v.strip() != "[NONE]"
                     ]
                 ),
+                "exclusions": {"common": common_exclusions, "conditional": {}},
+                "only_flags": {},
             }
+
+    def _parse_condition_line_with_options(self, line):
+        """Parse condition line and extract --only option
+
+        Input: "[man&&young] --only"
+        Output: ("[man&&young]", True)
+
+        Input: "[man]"
+        Output: ("[man]", False)
+        """
+        if not line.startswith("["):
+            return line, False
+
+        # Find closing bracket
+        end_bracket = line.find("]")
+        if end_bracket == -1:
+            return line, False
+
+        # Condition is everything up to and including ]
+        condition = line[: end_bracket + 1]
+
+        # Options are everything after ]
+        options_part = line[end_bracket + 1 :].strip()
+
+        # Check for --only flag
+        is_only = "--only" in options_part
+
+        return condition, is_only
 
 
 NODE_CLASS_MAPPINGS = {"SBTools_VariablePrompt": SBTools_VariablePrompt}

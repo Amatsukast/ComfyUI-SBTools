@@ -43,10 +43,13 @@ class CompilerUtils:
         """Parse condition line into structured format
 
         Input: "[man&&suit||casual]"
-        Output: [[("man", None)], [("suit", None), ("casual", None)]]
+        Output: [[("man", None, False)], [("suit", None, False), ("casual", None, False)]]
 
         With tag: "[GENDER:man&&suit]"
-        Output: [[("man", "GENDER")], [("suit", None)]]
+        Output: [[("man", "GENDER", False)], [("suit", None, False)]]
+
+        With NOT: "[man&&!young]"
+        Output: [[("man", None, False)], [("young", None, True)]]
         """
         if not line.startswith("[") or not line.endswith("]"):
             return None
@@ -55,7 +58,7 @@ class CompilerUtils:
 
         # Special case: [*] = wildcard all
         if content == "*":
-            return [[("*", None)]]
+            return [[("*", None, False)]]
 
         # Split by && (AND/hierarchy)
         and_parts = content.split("&&")
@@ -69,12 +72,18 @@ class CompilerUtils:
             for value in or_values:
                 value = value.strip()
 
+                # Check for NOT operator (!)
+                is_negated = False
+                if value.startswith("!"):
+                    is_negated = True
+                    value = value[1:].strip()
+
                 # Check for tag name (GENDER:man)
                 if ":" in value:
                     tag, val = value.split(":", 1)
-                    or_group.append((val.strip(), tag.strip()))
+                    or_group.append((val.strip(), tag.strip(), is_negated))
                 else:
-                    or_group.append((value, None))
+                    or_group.append((value, None, is_negated))
 
             result.append(or_group)
 
@@ -84,22 +93,23 @@ class CompilerUtils:
     def resolve_condition_tags(condition_parts, previous_vars):
         """Map condition values to tag names
 
-        Input: [[("man", None)], [("suit", "CLOTHING")]]
+        Input: [[("man", None, False)], [("suit", "CLOTHING", False)]]
         previous_vars: [GENDER_var, AGE_var, CLOTHING_var]
 
-        Output: {"GENDER": "man", "CLOTHING": "suit"}
+        Output: {"GENDER": ("man", False), "CLOTHING": ("suit", False)}
+        With NOT: {"GENDER": ("man", False), "AGE": ("young", True)}
         """
         resolved = {}
 
         for or_group in condition_parts:
-            for value, explicit_tag in or_group:
+            for value, explicit_tag, is_negated in or_group:
                 if value == "*":
                     # Wildcard - will be handled during matching
                     continue
 
                 if explicit_tag:
                     # Tag explicitly specified
-                    resolved[explicit_tag] = value
+                    resolved[explicit_tag] = (value, is_negated)
                     break  # Only use first match in OR group
                 else:
                     # Auto-detect from previous variables
@@ -112,7 +122,7 @@ class CompilerUtils:
 
                         # Check if value exists in this variable
                         if CompilerUtils._value_exists_in_var(value, var):
-                            resolved[tag_name] = value
+                            resolved[tag_name] = (value, is_negated)
                             break
                     else:
                         # Value found, no need to check other OR values
@@ -124,14 +134,16 @@ class CompilerUtils:
     def expand_or_conditions(condition_parts, previous_vars):
         """Expand OR conditions into multiple condition keys
 
-        Input: [[("suit", None), ("casual", None)]]  # OR condition
-        Output: [("CLOTHING", "suit"), ("CLOTHING", "casual")]  # Two separate keys
+        Input: [[("suit", None, False), ("casual", None, False)]]  # OR condition
+        Output: [(("CLOTHING", ("suit", False)),), (("CLOTHING", ("casual", False)),)]
 
-        Input: [[("man", None)], [("suit", None), ("casual", None)]]  # AND + OR
+        Input: [[("man", None, False)], [("suit", None, False), ("casual", None, False)]]  # AND + OR
         Output: [
-            (("GENDER", "man"), ("CLOTHING", "suit")),
-            (("GENDER", "man"), ("CLOTHING", "casual"))
+            (("GENDER", ("man", False)), ("CLOTHING", ("suit", False))),
+            (("GENDER", ("man", False)), ("CLOTHING", ("casual", False)))
         ]
+
+        Note: Returns tuple of 2-tuples to allow dict() conversion
         """
         import itertools
 
@@ -143,34 +155,34 @@ class CompilerUtils:
             if len(or_group) > 1:
                 # OR condition - expand later
                 or_values = []
-                for value, explicit_tag in or_group:
+                for value, explicit_tag, is_negated in or_group:
                     if value == "*":
                         # Wildcard - skip in OR group (means "any value")
                         continue
 
                     if explicit_tag:
-                        or_values.append((explicit_tag, value))
+                        or_values.append((explicit_tag, (value, is_negated)))
                     else:
                         # Auto-detect
                         for var in previous_vars:
                             if CompilerUtils._value_exists_in_var(value, var):
-                                or_values.append((var["tag_name"], value))
+                                or_values.append((var["tag_name"], (value, is_negated)))
                                 break
                 if or_values:  # Only add if not empty
                     or_groups.append(or_values)
             else:
                 # Single value (AND part)
-                value, explicit_tag = or_group[0]
+                value, explicit_tag, is_negated = or_group[0]
                 if value == "*":
                     # Wildcard - skip, means "don't filter by this level"
                     continue
 
                 if explicit_tag:
-                    and_resolved.append((explicit_tag, value))
+                    and_resolved.append((explicit_tag, (value, is_negated)))
                 else:
                     for var in previous_vars:
                         if CompilerUtils._value_exists_in_var(value, var):
-                            and_resolved.append((var["tag_name"], value))
+                            and_resolved.append((var["tag_name"], (value, is_negated)))
                             break
 
         # Expand OR combinations
@@ -209,23 +221,70 @@ class CompilerUtils:
             return value in values
 
     @staticmethod
+    def _apply_exclusions(values, var, current_values_dict=None):
+        """Apply exclusion rules (--value syntax) to filter values
+
+        Args:
+            values: List of values to filter
+            var: Variable data containing exclusion rules
+            current_values_dict: Current context values (for conditional exclusions)
+
+        Returns:
+            Filtered list of values
+        """
+        exclusions_data = var.get("exclusions", {})
+        if not exclusions_data:
+            return values
+
+        # Collect exclusions to apply
+        exclusions_to_apply = []
+
+        # Always apply common exclusions
+        exclusions_to_apply.extend(exclusions_data.get("common", []))
+
+        # Apply conditional exclusions if context is provided
+        if current_values_dict:
+            conditional_exclusions = exclusions_data.get("conditional", {})
+            for cond_key, excl_list in conditional_exclusions.items():
+                cond_dict = dict(cond_key)
+                if CompilerUtils.matches_condition(cond_dict, current_values_dict):
+                    exclusions_to_apply.extend(excl_list)
+
+        # Filter out excluded values
+        filtered = [v for v in values if v not in exclusions_to_apply]
+        return filtered
+
+    @staticmethod
     def matches_condition(condition_dict, current_values_dict):
         """Check if condition matches current values
 
-        condition_dict: {"CLOTHING": "suit"}  # [*&&suit] becomes just suit check
+        condition_dict: {"CLOTHING": ("suit", False)}  # With NOT: {"AGE": ("young", True)}
         current_values_dict: {"GENDER": "man", "CLOTHING": "casual"}
 
-        Returns: True if all conditions match
+        Returns: True if all conditions match (including NOT conditions)
         """
-        for tag, expected_value in condition_dict.items():
+        for tag, condition_value in condition_dict.items():
             if tag not in current_values_dict:
                 return False
+
+            # Handle both old format (string) and new format (tuple)
+            if isinstance(condition_value, tuple):
+                expected_value, is_negated = condition_value
+            else:
+                # Backward compatibility: old format without negation
+                expected_value = condition_value
+                is_negated = False
 
             if expected_value == "*":
                 # Wildcard for this tag - always matches
                 continue
 
-            if current_values_dict[tag] != expected_value:
+            # Check match with negation support
+            matches = current_values_dict[tag] == expected_value
+            if is_negated:
+                matches = not matches
+
+            if not matches:
                 return False
 
         return True
@@ -377,8 +436,13 @@ class CompilerUtils:
         elif mode == "Sequential":
             values = var["values"]
             if isinstance(values, list):
+                # Apply exclusions
+                filtered_values = CompilerUtils._apply_exclusions(
+                    values, var, current_values
+                )
+
                 # Simple sequential - iterate all values
-                for value in values:
+                for value in filtered_values:
                     current_values[tag_name] = value
                     yield from CompilerUtils._enumerate_combinations(
                         variables, current_index + 1, dict(current_values)
@@ -393,16 +457,29 @@ class CompilerUtils:
         elif mode == "Conditional":
             # Get available values based on current context
             values_dict = var.get("values", {})
+            only_flags = var.get("only_flags", {})
             available = []
+            has_only_match = False
 
-            # Add common values FIRST (written order)
-            available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match AFTER
+            # Check which conditional values match and if any have --only flag
+            matching_conditions = []
             for cond_key, cond_values in values_dict.get("conditional", {}).items():
                 cond_dict = dict(cond_key)
                 if CompilerUtils.matches_condition(cond_dict, current_values):
-                    available.extend(cond_values)
+                    matching_conditions.append((cond_key, cond_values))
+                    if only_flags.get(cond_key, False):
+                        has_only_match = True
+
+            # If any matching condition has --only, skip common values
+            if not has_only_match:
+                available.extend(values_dict.get("common", []))
+
+            # Add conditional values that match
+            for cond_key, cond_values in matching_conditions:
+                available.extend(cond_values)
+
+            # Apply exclusions
+            available = CompilerUtils._apply_exclusions(available, var, current_values)
 
             # Iterate through available values
             if available:
@@ -421,16 +498,29 @@ class CompilerUtils:
         elif mode == "ConditionalRandom":
             # Random within conditional context - show actual choices
             values_dict = var["values"]
+            only_flags = var.get("only_flags", {})
             available = []
+            has_only_match = False
 
-            # Add common values FIRST (written order)
-            available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match AFTER
+            # Check which conditional values match and if any have --only flag
+            matching_conditions = []
             for cond_key, cond_values in values_dict.get("conditional", {}).items():
                 cond_dict = dict(cond_key)
                 if CompilerUtils.matches_condition(cond_dict, current_values):
-                    available.extend(cond_values)
+                    matching_conditions.append((cond_key, cond_values))
+                    if only_flags.get(cond_key, False):
+                        has_only_match = True
+
+            # If any matching condition has --only, skip common values
+            if not has_only_match:
+                available.extend(values_dict.get("common", []))
+
+            # Add conditional values that match
+            for cond_key, cond_values in matching_conditions:
+                available.extend(cond_values)
+
+            # Apply exclusions
+            available = CompilerUtils._apply_exclusions(available, var, current_values)
 
             # Display as [RANDOM: choice1|choice2|...]
             if available:
@@ -478,9 +568,14 @@ class CompilerUtils:
             elif mode == "Sequential":
                 values = var.get("values", [])
                 if isinstance(values, list) and values:
+                    # Apply exclusions
+                    filtered_values = CompilerUtils._apply_exclusions(
+                        values, var, current_values
+                    )
+
                     # Calculate subsequent combinations for each value
                     value_combos = []
-                    for value in values:
+                    for value in filtered_values:
                         # Simulate selecting this value
                         test_context = dict(current_values)
                         test_context[tag_name] = value
@@ -492,7 +587,7 @@ class CompilerUtils:
 
                     # Find which value range the remaining_index falls into
                     cumulative = 0
-                    selected_value = values[0]
+                    selected_value = filtered_values[0] if filtered_values else ""
                     for value, count in value_combos:
                         if remaining_index < cumulative + count:
                             selected_value = value
@@ -508,16 +603,31 @@ class CompilerUtils:
             elif mode == "Conditional":
                 # Get available values based on current context
                 values_dict = var.get("values", {})
+                only_flags = var.get("only_flags", {})
                 available = []
+                has_only_match = False
 
-                # Add common values FIRST (written order)
-                available.extend(values_dict.get("common", []))
-
-                # Check conditional values AFTER
+                # Check which conditional values match and if any have --only flag
+                matching_conditions = []
                 for cond_key, cond_values in values_dict.get("conditional", {}).items():
                     cond_dict = dict(cond_key)
                     if CompilerUtils.matches_condition(cond_dict, current_values):
-                        available.extend(cond_values)
+                        matching_conditions.append((cond_key, cond_values))
+                        if only_flags.get(cond_key, False):
+                            has_only_match = True
+
+                # If any matching condition has --only, skip common values
+                if not has_only_match:
+                    available.extend(values_dict.get("common", []))
+
+                # Add conditional values that match
+                for cond_key, cond_values in matching_conditions:
+                    available.extend(cond_values)
+
+                # Apply exclusions
+                available = CompilerUtils._apply_exclusions(
+                    available, var, current_values
+                )
 
                 if available:
                     # Calculate subsequent combinations for each available value
@@ -551,16 +661,31 @@ class CompilerUtils:
             elif mode == "ConditionalRandom":
                 # Resolve based on current context, then random select
                 values_dict = var.get("values", {})
+                only_flags = var.get("only_flags", {})
                 available = []
+                has_only_match = False
 
-                # Add common values FIRST (written order)
-                available.extend(values_dict.get("common", []))
-
-                # Check conditional values AFTER
+                # Check which conditional values match and if any have --only flag
+                matching_conditions = []
                 for cond_key, cond_values in values_dict.get("conditional", {}).items():
                     cond_dict = dict(cond_key)
                     if CompilerUtils.matches_condition(cond_dict, current_values):
-                        available.extend(cond_values)
+                        matching_conditions.append((cond_key, cond_values))
+                        if only_flags.get(cond_key, False):
+                            has_only_match = True
+
+                # If any matching condition has --only, skip common values
+                if not has_only_match:
+                    available.extend(values_dict.get("common", []))
+
+                # Add conditional values that match
+                for cond_key, cond_values in matching_conditions:
+                    available.extend(cond_values)
+
+                # Apply exclusions
+                available = CompilerUtils._apply_exclusions(
+                    available, var, current_values
+                )
 
                 # Random selection from available
                 if available:
@@ -606,9 +731,14 @@ class CompilerUtils:
             if not values:
                 return 1
 
+            # Apply exclusions
+            filtered_values = CompilerUtils._apply_exclusions(
+                values, var, current_context
+            )
+
             # Sum combinations for each possible value
             total = 0
-            for value in values:
+            for value in filtered_values:
                 test_context = dict(current_context)
                 test_context[var["tag_name"]] = value
                 count = CompilerUtils._count_subsequent_combinations(
@@ -619,16 +749,29 @@ class CompilerUtils:
 
         elif mode == "Conditional":
             values_dict = var.get("values", {})
+            only_flags = var.get("only_flags", {})
             available = []
+            has_only_match = False
 
-            # Add common values
-            available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match
+            # Check which conditional values match and if any have --only flag
+            matching_conditions = []
             for cond_key, cond_values in values_dict.get("conditional", {}).items():
                 cond_dict = dict(cond_key)
                 if CompilerUtils.matches_condition(cond_dict, current_context):
-                    available.extend(cond_values)
+                    matching_conditions.append((cond_key, cond_values))
+                    if only_flags.get(cond_key, False):
+                        has_only_match = True
+
+            # If any matching condition has --only, skip common values
+            if not has_only_match:
+                available.extend(values_dict.get("common", []))
+
+            # Add conditional values that match
+            for cond_key, cond_values in matching_conditions:
+                available.extend(cond_values)
+
+            # Apply exclusions
+            available = CompilerUtils._apply_exclusions(available, var, current_context)
 
             if not available:
                 # No available values - use empty string and continue counting

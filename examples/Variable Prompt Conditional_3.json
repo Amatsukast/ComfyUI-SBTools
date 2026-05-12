@@ -1,0 +1,631 @@
+{
+  "id": "0a2609e9-9ef1-4e9f-b338-3c5099f1786a",
+  "revision": 0,
+  "last_node_id": 45,
+  "last_link_id": 203,
+  "nodes": [
+    {
+      "id": 7,
+      "type": "PreviewAny",
+      "pos": [
+        2120,
+        380
+      ],
+      "size": [
+        400,
+        120
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 149
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 5,
+      "type": "PreviewAny",
+      "pos": [
+        2120,
+        200
+      ],
+      "size": [
+        400,
+        120
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 148
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 41,
+      "type": "SBTools_VariableBuilder",
+      "pos": [
+        1680,
+        200
+      ],
+      "size": [
+        400,
+        320
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 196
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "widget": {
+            "name": "index"
+          },
+          "link": 151
+        }
+      ],
+      "outputs": [
+        {
+          "name": "PROMPT",
+          "type": "STRING",
+          "links": [
+            148
+          ]
+        },
+        {
+          "name": "IMAGE1",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "IMAGE2",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "IMAGE3",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "IMAGE4",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "MAX_COMBINATIONS",
+          "type": "INT",
+          "links": [
+            149
+          ]
+        },
+        {
+          "name": "ALL_COMBINATIONS",
+          "type": "STRING",
+          "links": [
+            150
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariableBuilder"
+      },
+      "widgets_values": [
+        "A [AGE] [GENDER] in [CLOTHING].",
+        0,
+        159562535,
+        "randomize",
+        ", "
+      ]
+    },
+    {
+      "id": 28,
+      "type": "SBTools_VariableCombiner",
+      "pos": [
+        1400,
+        200
+      ],
+      "size": [
+        240,
+        140
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list1",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 203
+        },
+        {
+          "name": "var_list2",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        },
+        {
+          "name": "var_list3",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        },
+        {
+          "name": "var_list4",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        },
+        {
+          "name": "var_list5",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        },
+        {
+          "name": "var_list6",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAR_LIST",
+          "type": "VARIABLE_LIST",
+          "links": [
+            196
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "a503865524260566660f89ee3bf4f58b3c6372e2",
+        "Node name for S&R": "SBTools_VariableCombiner"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "PreviewAny",
+      "pos": [
+        2120,
+        560
+      ],
+      "size": [
+        400,
+        380
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 150
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PreviewAny"
+      },
+      "widgets_values": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": 37,
+      "type": "SBTools_VariablePrompt",
+      "pos": [
+        80,
+        200
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAR_LIST",
+          "type": "VARIABLE_LIST",
+          "links": [
+            199
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
+      },
+      "widgets_values": [
+        "GENDER",
+        "man\nwoman",
+        false,
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 42,
+      "type": "SBTools_VariablePrompt",
+      "pos": [
+        520,
+        200
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 199
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAR_LIST",
+          "type": "VARIABLE_LIST",
+          "links": [
+            200
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
+      },
+      "widgets_values": [
+        "AGE",
+        "young\nmiddle",
+        false,
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 38,
+      "type": "SBTools_VariablePrompt",
+      "pos": [
+        960,
+        200
+      ],
+      "size": [
+        400,
+        300
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 200
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAR_LIST",
+          "type": "VARIABLE_LIST",
+          "links": [
+            201
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "342b973252c1ed47186386392f6395bdb32aea49",
+        "Node name for S&R": "SBTools_VariablePrompt"
+      },
+      "widgets_values": [
+        "CLOTHING",
+        "suit\nt-shirt\n\n[man&&!young]\ntrench coat\n\n[young] --only\nschool uniform\n\n[man&&middle]\n--t-shirt\njacket",
+        false,
+        "",
+        ""
+      ]
+    },
+    {
+      "id": 45,
+      "type": "SBTools_VariableFolder",
+      "pos": [
+        600,
+        580
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 201
+        }
+      ],
+      "outputs": [
+        {
+          "name": "var_list",
+          "type": "VARIABLE_LIST",
+          "links": [
+            202
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "e6a8148233660be6ce52b38a4211edffc0afb9ad",
+        "Node name for S&R": "SBTools_VariableFolder"
+      },
+      "widgets_values": [
+        "IMAGE1",
+        "C:\\images\\body\n\n[man]\nC:\\images\\body_man\n\n[woman] --only\nC:\\images\\body_woman"
+      ]
+    },
+    {
+      "id": 44,
+      "type": "SBTools_VariableImageLoader",
+      "pos": [
+        1040,
+        580
+      ],
+      "size": [
+        320,
+        340
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 202
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "VAR_LIST",
+          "type": "VARIABLE_LIST",
+          "links": [
+            203
+          ]
+        },
+        {
+          "name": "TOTAL_IMAGES",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "FILENAME",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "e6a8148233660be6ce52b38a4211edffc0afb9ad",
+        "Node name for S&R": "SBTools_VariableImageLoader"
+      },
+      "widgets_values": [
+        "",
+        "*",
+        0,
+        false,
+        3514111839,
+        "randomize",
+        false,
+        false,
+        false,
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "PrimitiveInt",
+      "pos": [
+        1680,
+        580
+      ],
+      "size": [
+        280,
+        100
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            151
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        0,
+        "increment"
+      ]
+    }
+  ],
+  "links": [
+    [
+      148,
+      41,
+      0,
+      5,
+      0,
+      "STRING"
+    ],
+    [
+      149,
+      41,
+      5,
+      7,
+      0,
+      "INT"
+    ],
+    [
+      150,
+      41,
+      6,
+      6,
+      0,
+      "STRING"
+    ],
+    [
+      151,
+      25,
+      0,
+      41,
+      1,
+      "INT"
+    ],
+    [
+      196,
+      28,
+      0,
+      41,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      199,
+      37,
+      0,
+      42,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      200,
+      42,
+      0,
+      38,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      201,
+      38,
+      0,
+      45,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      202,
+      45,
+      0,
+      44,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      203,
+      44,
+      1,
+      28,
+      0,
+      "VARIABLE_LIST"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8738479707343301,
+      "offset": [
+        104.09342632350403,
+        164.98958993838966
+      ]
+    },
+    "frontendVersion": "1.41.21",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

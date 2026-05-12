@@ -5,6 +5,95 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-04-27
+
+### Added
+
+- **NOT Condition (`!`)**: Negate conditions to match "everything except" logic
+  - Syntax: `[man&&!young]` matches man AND NOT young
+  - Works in both Variable Prompt and Variable Folder
+  - Example use case: `[man&&!young]` adds "trench coat" only for non-young men
+  - Implemented across condition parsing, matching, and combination generation
+  - Full support in `parse_condition_line`, `matches_condition`, `_enumerate_combinations`, `resolve_index`
+- **Exclusion Syntax (`--value`)**: Remove specific values from inherited common values
+  - Syntax: `--t-shirt` (in values list) excludes "t-shirt" from current context
+  - Context-aware exclusions: Common exclusions and conditional exclusions
+  - Variable Prompt: Exclude text values based on conditions
+  - Variable Folder: Exclude folder paths (converted to image path exclusions)
+  - New data structure: `exclusions: {"common": [], "conditional": {}}`
+  - Applied via `_apply_exclusions` helper function in all combination generation paths
+- **Exclusive Mode (`--only`)**: Completely override common values for specific conditions
+  - Syntax: `[man&&young] --only` (after condition line)
+  - When `--only` is set, common values are ignored for that specific condition
+  - Example: Common values (suit, casual) + `[man&&young] --only` → school uniform replaces all
+  - New data structure: `only_flags: {condition_key: True}`
+  - Applied in conditional value resolution across all modes (Conditional, ConditionalRandom)
+- **Example Workflow**: Variable Prompt Conditional_3.json demonstrating all three features
+  - man + young: school uniform only (--only)
+  - man + middle: suit, ~~t-shirt~~ (excluded), jacket, trench coat
+  - man + old: suit, t-shirt, trench coat
+  - woman + \*: suit, t-shirt (common values)
+
+### Changed
+
+- **Condition data structure**: Extended from 2-tuple to 3-tuple format
+  - Old: `(value, tag)` → New: `(value, tag, is_negated)`
+  - Example: `("young", None, True)` represents NOT young
+  - Backward compatible: `matches_condition` handles both old and new formats
+- **Condition keys in expand_or_conditions**: Modified to support value-negation pairs
+  - Old format: `(("GENDER", "man"), ("AGE", "young"))`
+  - New format: `(("GENDER", ("man", False)), ("AGE", ("young", True)))`
+  - Allows dict() conversion while preserving negation information
+- **Variable data structure**: Added `exclusions` and `only_flags` fields
+  - Both Variable Prompt and Variable Folder now store exclusion rules and only flags
+  - Exclusions applied during value filtering in all combination paths
+  - Only flags checked during conditional value resolution
+- **\_count_subsequent_combinations**: Now applies exclusions and only_flags
+  - Previously didn't account for exclusions, causing incorrect combination counts
+  - Fixed duplicate value issues in index resolution
+  - Ensures combination count matches actual generated combinations
+
+### Technical
+
+- **NOT condition implementation**:
+  - Parse `!` prefix in `parse_condition_line` to extract negation flag
+  - Store negation as third element in condition tuple
+  - Apply negation in `matches_condition` by inverting match result
+- **Exclusion implementation**:
+  - Parse `--value` syntax in value/folder parsing
+  - Store exclusions separately from values (common and conditional)
+  - Apply exclusions via `_apply_exclusions` helper using list comprehension
+  - For Variable Folder: Load images from excluded folders, store as exclusion list
+- **Exclusive mode implementation**:
+  - Parse `--only` flag from condition line options
+  - Store flag in `only_flags` dict with condition key
+  - Check flag during conditional value resolution: if set, skip common values
+  - Applies to both Conditional and ConditionalRandom modes
+- **Condition parsing flow**:
+  1. `normalize_condition_syntax`: Normalize `AND`/`OR`/full-width to `&&`/`||`
+  2. `parse_condition_line`: Parse into structured format with negation flags
+  3. `expand_or_conditions`: Expand OR groups, create condition keys with negation
+  4. `matches_condition`: Match with negation support
+- **Variable Folder specifics**:
+  - `_parse_condition_line_with_only`: Extended version that parses `--only` flag
+  - Folder exclusions converted to image path exclusions after file loading
+  - Exclusions stored as image paths, not folder paths
+
+### Fixed
+
+- **Combination count accuracy**: Fixed duplicate combinations in index resolution
+  - `_count_subsequent_combinations` now applies exclusions and only_flags
+  - Prevents miscounting when exclusions or only mode are active
+  - Example: Without fix, man+middle showed "jacket" twice; now correct
+
+### Notes
+
+- All three features work seamlessly together and can be combined
+- NOT condition is most useful for "mature/non-young" type logic
+- Exclusion syntax removes specific items while keeping others
+- Exclusive mode (`--only`) recommended over exclusion for clearer intent when replacing entire value sets
+- Variable Folder exclusion works at folder level, then converts to image paths
+
 ## [1.5.0] - 2026-04-24
 
 ### Added
