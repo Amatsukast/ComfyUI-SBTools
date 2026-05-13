@@ -27,3 +27,6 @@ tests/
 
 # Scripts for local use only
 scripts/
+
+# Releases
+releases/

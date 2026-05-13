@@ -23,9 +23,15 @@ Custom node collection for ComfyUI. Background removal, color analysis, and dyna
 
 ## Installation
 
-### Method 1: ComfyUI Manager (Coming Soon)
+### Method 1: ComfyUI Manager (Recommended)
 
-ComfyUI Manager support is in preparation. For now, please use manual installation.
+The easiest way to install is via [ComfyUI Manager](https://github.com/ltdrdata/ComfyUI-Manager).
+
+1. Open ComfyUI Manager in your ComfyUI interface.
+2. Click on **"Custom Nodes Manager"**.
+3. Search for **"ComfyUI-SBTools"**.
+4. Click **"Install"**.
+5. Restart ComfyUI.
 
 ### Method 2: Manual Installation
 
