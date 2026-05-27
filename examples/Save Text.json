@@ -1,0 +1,105 @@
+{
+  "id": "ccaeadbc-0415-459e-bf8c-8f75b0c843d3",
+  "revision": 0,
+  "last_node_id": 9,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 9,
+      "type": "SBTools_SaveText",
+      "pos": [
+        800,
+        300
+      ],
+      "size": [
+        270,
+        202
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "aux_id": "Amatsukast/ComfyUI-SBTools",
+        "ver": "4cc74f50311d22de7d57bac475258aee26e16486",
+        "Node name for S&R": "SBTools_SaveText"
+      },
+      "widgets_values": [
+        "",
+        "text_output",
+        "txt",
+        "Overwrite",
+        3,
+        "Back",
+        "_"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        360,
+        300
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.18.2",
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "text"
+      ]
+    }
+  ],
+  "links": [
+    [
+      6,
+      8,
+      0,
+      9,
+      0,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 2.5249315068493146,
+      "offset": [
+        -228.33333333333331,
+        -140.51215277777777
+      ]
+    },
+    "frontendVersion": "1.41.21",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

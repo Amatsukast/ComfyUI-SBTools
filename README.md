@@ -1,6 +1,6 @@
 # ComfyUI-SBTools
 
-**Latest Version: 1.5.1**
+**Latest Version: 1.6.0**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
@@ -18,6 +18,7 @@ Custom node collection for ComfyUI. Background removal, color analysis, and dyna
 | Match Color (SBTools) \*         | SBTools/Image  | Match color distribution between images (Lab/RGB/Adaptive)               |
 | Match Color Balance (SBTools) \* | SBTools/Image  | Match color temperature and tint (MKL/Shift methods)                     |
 | Match Luminance (SBTools) \*     | SBTools/Image  | Match brightness levels between images                                   |
+| Save Text (SBTools)              | SBTools/Text   | Save text to file with sequential numbering, overwrite, or append modes  |
 
 \* In development
 
@@ -1069,6 +1070,41 @@ See the complete workflow in the Example Workflow section above.
 - Distance is calculated as Euclidean distance in RGB space
 - A distance of 30 means the color differs by ~30 units per channel on average
 
+## Utilities
+
+### Save Text
+
+![Save Text Example](examples/Save%20Text.webp)
+
+Save any text string from your workflow to a local file. Designed as a terminal node — connect a STRING output from another node and save it with full control over path, filename, and write behavior.
+
+**Parameters:**
+
+**Required:**
+
+- `text` - Text to save (connect from another node)
+- `folder_path` - Subfolder relative to ComfyUI output directory (supports strftime, e.g. `%Y/%m/%d`)
+- `filename_prefix` - Base filename (supports strftime, e.g. `%Y%m%d_%H%M%S`). Default: `text_output`
+- `extension` - File extension without dot. Default: `txt`
+- `save_mode` - Write behavior:
+  - `Sequential`: Append zero-padded counter to filename; always creates a new file
+  - `Overwrite`: Replace existing file with the same name
+  - `Append`: Add text to end of existing file (inserts newline only when file already has content)
+- `counter_digits` - Digits for zero-padding (1–9). Only used in Sequential mode. Default: `3`
+- `counter_position` - Counter placement: `Back` → `name_001.txt`, `Front` → `001_name.txt`. Only used in Sequential mode
+- `separator` - Character between filename and counter. Default: `_`
+
+**Output:** None (terminal node)
+
+**Notes:**
+
+- `folder_path` and `filename_prefix` both support Python `strftime` formatting
+- Path traversal (`../`) is blocked; all files are saved inside the ComfyUI output directory
+- `counter_digits`, `counter_position`, and `separator` are only active in `Sequential` mode
+- Files are always saved with UTF-8 encoding
+
+**Download:** [Save Text.json](examples/Save%20Text.json)
+
 ## Technical Details
 
 ### Model Storage
@@ -1119,6 +1155,13 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 ### Version History
+
+**v1.6.0 (2026-05-27)** - Utilities
+
+- Save Text node for saving workflow text output to file
+- Sequential numbering, Overwrite, and Append write modes
+- strftime format support for folder and filename
+- Path traversal protection
 
 **v1.5.1 (2026-04-27)** - Advanced Conditional Syntax
 
@@ -1181,6 +1224,10 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 **Image Processing:**
 
 - [Remove BG and Fill BG.json](examples/Remove%20BG%20and%20Fill%20BG.json) - Background removal with chroma key fill
+
+**Utilities:**
+
+- [Save Text.json](examples/Save%20Text.json) - Save text output to file
 
 ---
 

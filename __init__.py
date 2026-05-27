@@ -1,6 +1,6 @@
 """ComfyUI-SBTools - Custom Node Collection"""
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 from .nodes.birefnet_node import NODE_CLASS_MAPPINGS as BIREFNET_MAPPINGS
 from .nodes.birefnet_node import NODE_DISPLAY_NAME_MAPPINGS as BIREFNET_DISPLAY
@@ -26,6 +26,8 @@ from .nodes.match_color_balance import (
 )
 from .nodes.match_luminance import NODE_CLASS_MAPPINGS as MATCHLUMINANCE_MAPPINGS
 from .nodes.match_luminance import NODE_DISPLAY_NAME_MAPPINGS as MATCHLUMINANCE_DISPLAY
+from .nodes.save_text import NODE_CLASS_MAPPINGS as SAVETEXT_MAPPINGS
+from .nodes.save_text import NODE_DISPLAY_NAME_MAPPINGS as SAVETEXT_DISPLAY
 
 NODE_CLASS_MAPPINGS = {
     **BIREFNET_MAPPINGS,
@@ -38,6 +40,7 @@ NODE_CLASS_MAPPINGS = {
     **MATCHCOLOR_MAPPINGS,
     **MATCHCOLORBALANCE_MAPPINGS,
     **MATCHLUMINANCE_MAPPINGS,
+    **SAVETEXT_MAPPINGS,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -51,6 +54,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **MATCHCOLOR_DISPLAY,
     **MATCHCOLORBALANCE_DISPLAY,
     **MATCHLUMINANCE_DISPLAY,
+    **SAVETEXT_DISPLAY,
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

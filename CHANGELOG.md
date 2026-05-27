@@ -5,6 +5,22 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-05-27
+
+### Added
+
+- **Save Text Node**: Save any text string from a ComfyUI workflow to a local file
+  - Three write modes: `Sequential` (numbered files), `Overwrite`, `Append`
+  - `folder_path` and `filename_prefix` support Python `strftime` formatting (e.g., `%Y/%m/%d`, `%Y%m%d_%H%M%S`)
+  - Sequential mode: zero-padded counter with configurable digits (1–9), position (Front/Back), and separator
+  - Append mode: smart newline insertion — prepends `\n` only when the target file already has content
+  - Path traversal protection using `os.path.abspath` + `os.path.commonpath`; different-drive paths rejected
+  - Fast counter scanning with `os.scandir()` and regex matching (tolerant of digit-length changes)
+  - Sanitization per input type: folder separators preserved in `folder_path`, stripped from `filename_prefix`
+  - Terminal node (`OUTPUT_NODE = True`) with no output pins; `text` input is connection-only (`forceInput`)
+  - Files always written with UTF-8 encoding
+  - Example workflow: `Save Text.json` / `Save Text.webp`
+
 ## [1.5.1] - 2026-04-27
 
 ### Added
