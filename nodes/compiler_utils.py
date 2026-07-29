@@ -5,6 +5,7 @@
 
 import re
 import random
+import zlib
 
 
 class CompilerUtils:
@@ -542,12 +543,13 @@ class CompilerUtils:
         Returns: list of selected values in variable order
         """
         # Handle Random variables first
-        random.seed(seed)
         random_values = {}
-        for var in variables:
+        for var_idx, var in enumerate(variables):
             if var.get("mode") == "Random":
                 values = var.get("values", [])
                 if isinstance(values, list) and values:
+                    var_seed = zlib.crc32(f"{seed}_{var_idx}".encode('utf-8'))
+                    random.seed(var_seed)
                     random_values[var["tag_name"]] = random.choice(values)
 
         # Build current values context and result
@@ -691,7 +693,8 @@ class CompilerUtils:
                 if available:
                     # Use image-specific seed if available
                     image_seed = var.get("seed", seed)
-                    random.seed(image_seed)
+                    var_seed = zlib.crc32(f"{image_seed}_{var_idx}".encode('utf-8'))
+                    random.seed(var_seed)
                     selected = random.choice(available)
                     result.append(selected)
                     current_values[tag_name] = selected
