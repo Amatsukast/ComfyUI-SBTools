@@ -155,10 +155,10 @@ class SBTools_VariableFolder:
                     # Warn if condition didn't match anything
                     if not current_condition:
                         print(
-                            f"\033[93m⚠️  WARNING: Condition '{condition_part}' did not match any values in previous variables\033[0m"
+                            f"\033[93m[WARNING] Condition '{condition_part}' did not match any values in previous variables\033[0m"
                         )
                         print(
-                            f"\033[93m   → Folders following this condition will be ignored\033[0m"
+                            f"\033[93m   -> Folders following this condition will be ignored\033[0m"
                         )
             else:
                 # Folder path line - check for exclusion syntax (--folder_path)
@@ -175,7 +175,7 @@ class SBTools_VariableFolder:
                         if isinstance(current_condition, list):
                             if not current_condition:
                                 print(
-                                    f"\033[93m   → Ignoring exclusion: '--{folder_to_exclude}'\033[0m"
+                                    f"\033[93m   -> Ignoring exclusion: '--{folder_to_exclude}'\033[0m"
                                 )
                             else:
                                 for cond_key in current_condition:
@@ -202,7 +202,7 @@ class SBTools_VariableFolder:
                             if not current_condition:
                                 # Empty condition - folder will be ignored
                                 print(
-                                    f"\033[93m   → Ignoring folder: '{folder_path}'\033[0m"
+                                    f"\033[93m   -> Ignoring folder: '{folder_path}'\033[0m"
                                 )
                             else:
                                 # Multiple conditions (OR) - add to all

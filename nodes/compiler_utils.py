@@ -15,8 +15,8 @@ class CompilerUtils:
     def normalize_condition_syntax(line):
         """Normalize all condition syntaxes to unified format
 
-        Converts: AND → &&, OR → ||
-        Full-width support: ＆＆ → &&, ｜｜ → ||, ： → :, 　 → space
+        Converts: AND -> &&, OR -> ||
+        Full-width support: ＆＆ -> &&, ｜｜ -> ||, ： -> :, 　 -> space
         Returns: normalized string
         """
         if not line.startswith("[") or not line.endswith("]"):

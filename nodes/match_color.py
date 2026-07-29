@@ -168,7 +168,7 @@ class SBTools_MatchColor:
         """
         # Convert to Lab space if needed
         if color_space == "Lab":
-            # RGB → Lab: (H, W, 3) → (1, 3, H, W) → Lab → (H, W, 3)
+            # RGB -> Lab: (H, W, 3) -> (1, 3, H, W) -> Lab -> (H, W, 3)
             target_bchw = target.unsqueeze(0).permute(0, 3, 1, 2)  # (1, 3, H, W)
             reference_bchw = reference.unsqueeze(0).permute(0, 3, 1, 2)  # (1, 3, H, W)
 
@@ -221,7 +221,7 @@ class SBTools_MatchColor:
 
         # Convert back to RGB if we were in Lab space
         if color_space == "Lab":
-            # Lab → RGB: (H, W, 3) → (1, 3, H, W) → RGB → (H, W, 3)
+            # Lab -> RGB: (H, W, 3) -> (1, 3, H, W) -> RGB -> (H, W, 3)
             matched_bchw = matched_space.unsqueeze(0).permute(
                 0, 3, 1, 2
             )  # (1, 3, H, W)
@@ -409,8 +409,8 @@ class SBTools_MatchColor:
         shadow_crush = torch.clamp(
             (shadow_threshold - rgb_result_L) / shadow_threshold, 0, 1
         )
-        # rgb_result_L=0 → 1.0 (完全に潰れている)
-        # rgb_result_L=15 → 0.0 (問題なし)
+        # rgb_result_L=0 -> 1.0 (完全に潰れている)
+        # rgb_result_L=15 -> 0.0 (問題なし)
 
         # ターゲットの元の暗部と比較
         target_shadow = torch.clamp(
