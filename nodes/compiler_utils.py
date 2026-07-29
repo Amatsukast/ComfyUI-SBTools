@@ -8,6 +8,14 @@ import random
 import zlib
 
 
+# Exact combination counting is capped here. A graph with conditional variables can
+# describe astronomically many combinations (values multiply per variable), and the
+# count used to be obtained by materializing every combination in a list - which was
+# enough to exhaust system memory. Past this many, callers get the cap back and
+# resolve_index switches to a non-counting strategy.
+COMBINATION_LIMIT = 100_000
+
+
 class CompilerUtils:
     """Shared logic for all compiler nodes"""
 
@@ -38,6 +46,32 @@ class CompilerUtils:
         content = content.replace("：", ":")  # For tag name specification
 
         return f"[{content}]"
+
+    @staticmethod
+    def warn_unparsed_condition_tail(line, options_part, known_flags):
+        """Warn when a condition line has content past the first ']'.
+
+        Only the first bracketed group is the condition - everything after it is read
+        as flags and anything unrecognised is dropped. Writing [A]&&[B] therefore
+        silently applied [A] alone. A condition is one bracketed expression: combine
+        terms with && / || *inside* it, e.g. [A||B&&C].
+        """
+        leftover = options_part
+        for flag in known_flags:
+            leftover = leftover.replace(flag, " ")
+        leftover = leftover.strip()
+
+        if not leftover:
+            return
+
+        print(
+            f"\033[93m[WARNING] Ignoring '{leftover}' in condition line "
+            f"'{line.strip()}'\033[0m"
+        )
+        print(
+            "\033[93m   -> Only the first [...] group is the condition. Combine terms "
+            "inside one bracket instead, e.g. [A||B&&C].\033[0m"
+        )
 
     @staticmethod
     def parse_condition_line(line):
@@ -91,47 +125,6 @@ class CompilerUtils:
         return result
 
     @staticmethod
-    def resolve_condition_tags(condition_parts, previous_vars):
-        """Map condition values to tag names
-
-        Input: [[("man", None, False)], [("suit", "CLOTHING", False)]]
-        previous_vars: [GENDER_var, AGE_var, CLOTHING_var]
-
-        Output: {"GENDER": ("man", False), "CLOTHING": ("suit", False)}
-        With NOT: {"GENDER": ("man", False), "AGE": ("young", True)}
-        """
-        resolved = {}
-
-        for or_group in condition_parts:
-            for value, explicit_tag, is_negated in or_group:
-                if value == "*":
-                    # Wildcard - will be handled during matching
-                    continue
-
-                if explicit_tag:
-                    # Tag explicitly specified
-                    resolved[explicit_tag] = (value, is_negated)
-                    break  # Only use first match in OR group
-                else:
-                    # Auto-detect from previous variables
-                    for var in previous_vars:
-                        tag_name = var["tag_name"]
-
-                        # Skip if already assigned
-                        if tag_name in resolved:
-                            continue
-
-                        # Check if value exists in this variable
-                        if CompilerUtils._value_exists_in_var(value, var):
-                            resolved[tag_name] = (value, is_negated)
-                            break
-                    else:
-                        # Value found, no need to check other OR values
-                        break
-
-        return resolved
-
-    @staticmethod
     def expand_or_conditions(condition_parts, previous_vars):
         """Expand OR conditions into multiple condition keys
 
@@ -161,14 +154,11 @@ class CompilerUtils:
                         # Wildcard - skip in OR group (means "any value")
                         continue
 
-                    if explicit_tag:
-                        or_values.append((explicit_tag, (value, is_negated)))
-                    else:
-                        # Auto-detect
-                        for var in previous_vars:
-                            if CompilerUtils._value_exists_in_var(value, var):
-                                or_values.append((var["tag_name"], (value, is_negated)))
-                                break
+                    resolved = CompilerUtils._resolve_condition_term(
+                        value, explicit_tag, is_negated, previous_vars
+                    )
+                    if resolved is not None:
+                        or_values.append(resolved)
                 if or_values:  # Only add if not empty
                     or_groups.append(or_values)
             else:
@@ -178,13 +168,11 @@ class CompilerUtils:
                     # Wildcard - skip, means "don't filter by this level"
                     continue
 
-                if explicit_tag:
-                    and_resolved.append((explicit_tag, (value, is_negated)))
-                else:
-                    for var in previous_vars:
-                        if CompilerUtils._value_exists_in_var(value, var):
-                            and_resolved.append((var["tag_name"], (value, is_negated)))
-                            break
+                resolved = CompilerUtils._resolve_condition_term(
+                    value, explicit_tag, is_negated, previous_vars
+                )
+                if resolved is not None:
+                    and_resolved.append(resolved)
 
         # Expand OR combinations
         if or_groups:
@@ -205,6 +193,54 @@ class CompilerUtils:
                 return []
 
     @staticmethod
+    def _resolve_condition_term(value, explicit_tag, is_negated, previous_vars):
+        """Resolve one condition term to (tag_name, (value, is_negated)).
+
+        Returns None when the term cannot be resolved at all.
+
+        Diagnostics only - the resolution behaviour is unchanged. An explicit
+        [TAG:value] used to be accepted with no checking whatsoever, so a typo, or
+        a reference to a variable connected AFTER this one, produced a condition
+        that silently never matched.
+        """
+        if explicit_tag:
+            target = None
+            for var in previous_vars:
+                if var.get("tag_name") == explicit_tag:
+                    target = var
+                    break
+
+            if target is None:
+                print(
+                    f"\033[93m[WARNING] Condition [{explicit_tag}:{value}] refers to "
+                    f"unknown tag '{explicit_tag}'\033[0m"
+                )
+                print(
+                    "\033[93m   -> Either the name is misspelled, or that variable is "
+                    "connected AFTER this one. Conditions can only reference earlier "
+                    "variables, so this will never match.\033[0m"
+                )
+            elif not CompilerUtils._value_exists_in_var(value, target):
+                print(
+                    f"\033[93m[WARNING] Condition [{explicit_tag}:{value}] - "
+                    f"'{value}' is not one of the values of '{explicit_tag}'. "
+                    f"This will never match.\033[0m"
+                )
+
+            return (explicit_tag, (value, is_negated))
+
+        # Auto-detect which earlier variable owns this value
+        for var in previous_vars:
+            if CompilerUtils._value_exists_in_var(value, var):
+                return (var["tag_name"], (value, is_negated))
+
+        print(
+            f"\033[93m[WARNING] Condition value '{value}' was not found in any "
+            f"earlier variable. This term is ignored.\033[0m"
+        )
+        return None
+
+    @staticmethod
     def _value_exists_in_var(value, var):
         """Check if value exists in variable's values"""
         values = var.get("values", [])
@@ -222,6 +258,155 @@ class CompilerUtils:
             return value in values
 
     @staticmethod
+    def _weights_for(stored, count):
+        """Pad/trim a stored weight list to match a value list. Default weight is 1."""
+        if not stored:
+            return [1.0] * count
+        if len(stored) == count:
+            return list(stored)
+        out = list(stored[:count])
+        out.extend([1.0] * (count - len(out)))
+        return out
+
+    @staticmethod
+    def _available_pool(var, current_values):
+        """(values, weights) this variable can take in the given context.
+
+        Single source of truth for "what can this variable be right now" - the same
+        block used to be copy-pasted into enumeration, counting and resolution, so
+        they could drift apart.
+
+        Weights travel alongside the values rather than in a {value: weight} map,
+        because the same value can appear in both the common list and a matching
+        conditional block with a different weight. Keeping them positional lets both
+        contribute, which is what "--N means N copies of this line" implies.
+        """
+        values = var.get("values", [])
+        stored_weights = var.get("weights")
+
+        if not isinstance(values, dict):
+            pool = list(values) if values else []
+            pool_weights = CompilerUtils._weights_for(
+                stored_weights if isinstance(stored_weights, list) else None, len(pool)
+            )
+        else:
+            stored_weights = stored_weights if isinstance(stored_weights, dict) else {}
+            only_flags = var.get("only_flags", {})
+            matching = []
+            has_only_match = False
+
+            for cond_key, cond_values in values.get("conditional", {}).items():
+                if CompilerUtils.matches_condition(cond_key, current_values):
+                    matching.append((cond_key, cond_values))
+                    if only_flags.get(cond_key, False):
+                        has_only_match = True
+
+            pool = []
+            pool_weights = []
+            # If any matching condition has --only, common values are skipped
+            if not has_only_match:
+                common = values.get("common", [])
+                pool.extend(common)
+                pool_weights.extend(
+                    CompilerUtils._weights_for(
+                        stored_weights.get("common"), len(common)
+                    )
+                )
+            for cond_key, cond_values in matching:
+                pool.extend(cond_values)
+                pool_weights.extend(
+                    CompilerUtils._weights_for(
+                        stored_weights.get("conditional", {}).get(cond_key),
+                        len(cond_values),
+                    )
+                )
+
+        excluded = CompilerUtils._exclusions_for(var, current_values)
+        if excluded:
+            kept = [(v, w) for v, w in zip(pool, pool_weights) if v not in excluded]
+            pool = [v for v, _ in kept]
+            pool_weights = [w for _, w in kept]
+
+        return pool, pool_weights
+
+    @staticmethod
+    def _available_values(var, current_values):
+        """Values this variable can take in the given context, exclusions applied."""
+        return CompilerUtils._available_pool(var, current_values)[0]
+
+    @staticmethod
+    def _weighted_choice(pool, weights):
+        """Pick one value honouring weights. Returns "" if every weight is zero."""
+        if not pool:
+            return ""
+        total = sum(weights)
+        if total <= 0:
+            # Every candidate was set to --0: treat the pool as empty rather than
+            # letting random.choices raise.
+            return ""
+        return random.choices(pool, weights=weights, k=1)[0]
+
+    @staticmethod
+    def _relevant_tags_from(variables):
+        """Per position, the tags that any variable from there on actually tests.
+
+        Counting only has to tell contexts apart by these tags. Most variables are
+        referenced by nobody downstream, so this is what makes memoisation pay off.
+        """
+        relevant = [set() for _ in range(len(variables) + 1)]
+
+        for i in range(len(variables) - 1, -1, -1):
+            tags = set(relevant[i + 1])
+
+            values = variables[i].get("values", {})
+            if isinstance(values, dict):
+                for cond_key in values.get("conditional", {}):
+                    for tag, _ in cond_key:
+                        tags.add(tag)
+
+            exclusions = variables[i].get("exclusions", {})
+            if isinstance(exclusions, dict):
+                for cond_key in exclusions.get("conditional", {}):
+                    for tag, _ in cond_key:
+                        tags.add(tag)
+
+            relevant[i] = tags
+
+        return relevant
+
+    @staticmethod
+    def _is_countable(variables, limit=COMBINATION_LIMIT):
+        """Cheap O(variables) check: is exact counting worth attempting?
+
+        Multiplies a context-independent upper bound of each pool size, so it
+        over-estimates and errs towards the cheap path. Returning False never means
+        "no combinations", only "too many to count one by one".
+        """
+        total = 1
+        for var in variables:
+            if var.get("mode") not in ("Sequential", "Conditional"):
+                continue
+
+            values = var.get("values", [])
+            if isinstance(values, dict):
+                size = len(values.get("common", []))
+                for cond_values in values.get("conditional", {}).values():
+                    size += len(cond_values)
+            else:
+                size = len(values)
+
+            if size > 1:
+                total *= size
+                if total > limit:
+                    return False
+        return True
+
+    @staticmethod
+    def _exclusions_for(var, current_values_dict=None):
+        """Values removed by --value syntax in the given context."""
+        return CompilerUtils._collect_exclusions(var, current_values_dict)
+
+    @staticmethod
     def _apply_exclusions(values, var, current_values_dict=None):
         """Apply exclusion rules (--value syntax) to filter values
 
@@ -233,9 +418,19 @@ class CompilerUtils:
         Returns:
             Filtered list of values
         """
+        exclusions_to_apply = CompilerUtils._collect_exclusions(
+            var, current_values_dict
+        )
+        if not exclusions_to_apply:
+            return values
+        return [v for v in values if v not in exclusions_to_apply]
+
+    @staticmethod
+    def _collect_exclusions(var, current_values_dict=None):
+        """Gather the --value exclusions that apply in this context."""
         exclusions_data = var.get("exclusions", {})
         if not exclusions_data:
-            return values
+            return []
 
         # Collect exclusions to apply
         exclusions_to_apply = []
@@ -247,24 +442,30 @@ class CompilerUtils:
         if current_values_dict:
             conditional_exclusions = exclusions_data.get("conditional", {})
             for cond_key, excl_list in conditional_exclusions.items():
-                cond_dict = dict(cond_key)
-                if CompilerUtils.matches_condition(cond_dict, current_values_dict):
+                if CompilerUtils.matches_condition(cond_key, current_values_dict):
                     exclusions_to_apply.extend(excl_list)
 
-        # Filter out excluded values
-        filtered = [v for v in values if v not in exclusions_to_apply]
-        return filtered
+        return exclusions_to_apply
 
     @staticmethod
-    def matches_condition(condition_dict, current_values_dict):
+    def matches_condition(condition, current_values_dict):
         """Check if condition matches current values
 
-        condition_dict: {"CLOTHING": ("suit", False)}  # With NOT: {"AGE": ("young", True)}
+        condition: sequence of (tag, (value, is_negated)) pairs as produced by
+            expand_or_conditions, e.g.
+            (("CLOTHING", ("naked", True)), ("CLOTHING", ("bikini", True)))
         current_values_dict: {"GENDER": "man", "CLOTHING": "casual"}
 
-        Returns: True if all conditions match (including NOT conditions)
+        A plain dict {tag: (value, is_negated)} is still accepted for backward
+        compatibility, but conditions are kept as sequences because a dict cannot
+        hold more than one constraint per tag - which silently dropped constraints
+        like [!CLOTHING:naked&&!CLOTHING:bikini] down to just the last one.
+
+        Returns: True only if EVERY constraint holds (including NOT conditions)
         """
-        for tag, condition_value in condition_dict.items():
+        items = condition.items() if isinstance(condition, dict) else condition
+
+        for tag, condition_value in items:
             if tag not in current_values_dict:
                 return False
 
@@ -291,117 +492,41 @@ class CompilerUtils:
         return True
 
     @staticmethod
-    def calculate_combinations(variables):
-        """Calculate total combinations including conditional variables
+    def calculate_combinations(variables, limit=COMBINATION_LIMIT):
+        """Total number of Sequential/Conditional combinations, capped at `limit`.
 
-        Uses lazy evaluation approach - doesn't generate all combinations
-        """
-        # Separate by mode
-        independent_vars = []
-        conditional_vars = []
+        Random and ConditionalRandom variables re-roll every execution, so they do
+        not multiply the combination count.
 
-        for var in variables:
-            if var.get("mode") in ["Conditional", "ConditionalRandom"]:
-                conditional_vars.append(var)
-            elif var.get("mode") in ["Sequential", "Random"]:
-                independent_vars.append(var)
-
-        if not conditional_vars:
-            # No conditional variables - use simple product
-            sequential = [v for v in independent_vars if v["mode"] == "Sequential"]
-            if not sequential:
-                return 1
-
-            total = 1
-            for var in sequential:
-                total *= len(var["values"])
-            return total
-
-        # With conditional variables - need to calculate per condition
-        # This is a simplified version - full implementation would enumerate
-        # For now, return estimate
-        sequential = [v for v in variables if v.get("mode") == "Sequential"]
-        if not sequential:
-            return 1
-
-        # Build dependency graph and calculate
-        return CompilerUtils._calculate_conditional_combinations(variables)
-
-    @staticmethod
-    def _calculate_conditional_combinations(variables):
-        """Calculate combinations with conditional variables"""
-        # Enumerate all actual combinations
-        all_combos = list(CompilerUtils._enumerate_combinations(variables))
-        return len(all_combos)
-
-    @staticmethod
-    def _enumerate_combinations_reversed(variables):
-        """Enumerate combinations with last variable changing fastest
-
-        Strategy: Generate normally (forward), then reorder results so last variable changes fastest
+        Previously this counted by building the whole combination list in memory and
+        taking its length, and it only ran at all when some variable had mode exactly
+        "Sequential" - meaning a graph made purely of Conditional variables reported
+        1 combination and its index never advanced.
         """
         if not variables:
-            return
+            return 1
 
-        # Generate all combinations normally (forward order maintains dependencies)
-        all_combos = list(CompilerUtils._enumerate_combinations(variables))
+        if not any(v.get("mode") in ("Sequential", "Conditional") for v in variables):
+            return 1
 
-        if not all_combos:
-            return
+        if not CompilerUtils._is_countable(variables, limit):
+            return limit
 
-        # Reorder: Create index mapping for each combination
-        # We need to sort by: (var0_index, var1_index, ..., varN_index)
-        # where varN changes fastest (reverse of generation order)
-
-        # Build value->index mappings for each variable
-        value_indices = []
-        for var in variables:
-            mode = var.get("mode", "Sequential")
-
-            if mode in ["Random", "ConditionalRandom"]:
-                # Random variables don't affect ordering
-                value_indices.append({})
-            elif mode == "Sequential":
-                values = var.get("values", [])
-                idx_map = {v: i for i, v in enumerate(values)}
-                value_indices.append(idx_map)
-            elif mode == "Conditional":
-                # For conditional, collect all possible values and assign indices
-                values_dict = var.get("values", {})
-                all_vals = []
-                all_vals.extend(values_dict.get("common", []))
-                for cond_vals in values_dict.get("conditional", {}).values():
-                    for v in cond_vals:
-                        if v not in all_vals:
-                            all_vals.append(v)
-                idx_map = {v: i for i, v in enumerate(all_vals)}
-                value_indices.append(idx_map)
-            else:
-                value_indices.append({})
-
-        # Sort combinations: last variable index changes fastest
-        def sort_key(combo):
-            # Return tuple of indices in REVERSE order (last var first in tuple)
-            indices = []
-            for i in range(len(variables) - 1, -1, -1):  # Reverse order
-                val = combo[i]
-                if isinstance(val, str) and val.startswith("[RANDOM"):
-                    indices.append(0)  # Random values stay at 0
-                else:
-                    idx_map = value_indices[i]
-                    indices.append(idx_map.get(val, 0))
-            return tuple(indices)
-
-        sorted_combos = sorted(all_combos, key=sort_key)
-
-        for combo in sorted_combos:
-            yield combo
+        total = CompilerUtils._count_subsequent_combinations(
+            variables, 0, {}, limit=limit
+        )
+        return max(1, min(total, limit))
 
     @staticmethod
     def _enumerate_combinations(variables, current_index=0, current_values=None):
-        """Recursively enumerate all valid combinations (forward order, for legacy use)
+        """Lazily enumerate valid combinations, first variable changing slowest.
 
-        Note: This is the OLD implementation. Use _enumerate_combinations_reversed for correct order.
+        This is a generator on purpose: callers must take only what they need. The
+        full space is unbounded on conditional graphs.
+
+        Random / ConditionalRandom variables do not expand into combinations - they
+        yield a "[RANDOM: a|b|c]" placeholder listing the choices available in the
+        current context.
         """
         if current_values is None:
             current_values = {}
@@ -434,53 +559,8 @@ class CompilerUtils:
                 variables, current_index + 1, current_values
             )
 
-        elif mode == "Sequential":
-            values = var["values"]
-            if isinstance(values, list):
-                # Apply exclusions
-                filtered_values = CompilerUtils._apply_exclusions(
-                    values, var, current_values
-                )
-
-                # Simple sequential - iterate all values
-                for value in filtered_values:
-                    current_values[tag_name] = value
-                    yield from CompilerUtils._enumerate_combinations(
-                        variables, current_index + 1, dict(current_values)
-                    )
-            else:
-                # Should not happen for Sequential
-                current_values[tag_name] = ""
-                yield from CompilerUtils._enumerate_combinations(
-                    variables, current_index + 1, current_values
-                )
-
-        elif mode == "Conditional":
-            # Get available values based on current context
-            values_dict = var.get("values", {})
-            only_flags = var.get("only_flags", {})
-            available = []
-            has_only_match = False
-
-            # Check which conditional values match and if any have --only flag
-            matching_conditions = []
-            for cond_key, cond_values in values_dict.get("conditional", {}).items():
-                cond_dict = dict(cond_key)
-                if CompilerUtils.matches_condition(cond_dict, current_values):
-                    matching_conditions.append((cond_key, cond_values))
-                    if only_flags.get(cond_key, False):
-                        has_only_match = True
-
-            # If any matching condition has --only, skip common values
-            if not has_only_match:
-                available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match
-            for cond_key, cond_values in matching_conditions:
-                available.extend(cond_values)
-
-            # Apply exclusions
-            available = CompilerUtils._apply_exclusions(available, var, current_values)
+        elif mode in ("Sequential", "Conditional"):
+            available = CompilerUtils._available_values(var, current_values)
 
             # Iterate through available values
             if available:
@@ -490,7 +570,11 @@ class CompilerUtils:
                         variables, current_index + 1, dict(current_values)
                     )
             else:
-                # No available values - use empty string and continue
+                # No available values - use empty string and continue.
+                # This fallback is essential: a variable with an empty value list
+                # used to yield nothing at all, which turned it into a dead end.
+                # The search then backtracked through every earlier combination
+                # without ever producing a single result - an apparent hang.
                 current_values[tag_name] = ""
                 yield from CompilerUtils._enumerate_combinations(
                     variables, current_index + 1, current_values
@@ -498,30 +582,7 @@ class CompilerUtils:
 
         elif mode == "ConditionalRandom":
             # Random within conditional context - show actual choices
-            values_dict = var["values"]
-            only_flags = var.get("only_flags", {})
-            available = []
-            has_only_match = False
-
-            # Check which conditional values match and if any have --only flag
-            matching_conditions = []
-            for cond_key, cond_values in values_dict.get("conditional", {}).items():
-                cond_dict = dict(cond_key)
-                if CompilerUtils.matches_condition(cond_dict, current_values):
-                    matching_conditions.append((cond_key, cond_values))
-                    if only_flags.get(cond_key, False):
-                        has_only_match = True
-
-            # If any matching condition has --only, skip common values
-            if not has_only_match:
-                available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match
-            for cond_key, cond_values in matching_conditions:
-                available.extend(cond_values)
-
-            # Apply exclusions
-            available = CompilerUtils._apply_exclusions(available, var, current_values)
+            available = CompilerUtils._available_values(var, current_values)
 
             # Display as [RANDOM: choice1|choice2|...]
             if available:
@@ -548,170 +609,96 @@ class CompilerUtils:
             if var.get("mode") == "Random":
                 values = var.get("values", [])
                 if isinstance(values, list) and values:
-                    var_seed = zlib.crc32(f"{seed}_{var_idx}".encode('utf-8'))
+                    weights = CompilerUtils._weights_for(
+                        var.get("weights"), len(values)
+                    )
+                    var_seed = zlib.crc32(f"{seed}_{var_idx}".encode("utf-8"))
                     random.seed(var_seed)
-                    random_values[var["tag_name"]] = random.choice(values)
+                    random_values[var["tag_name"]] = CompilerUtils._weighted_choice(
+                        values, weights
+                    )
+
+        # Mapping an index onto an exact combination needs, at every step, the number
+        # of combinations sitting under each candidate value. That costs O(total
+        # combinations) - fine for ordinary graphs, impossible for large conditional
+        # ones. Decide once which strategy to use.
+        exact = CompilerUtils._is_countable(variables)
+        relevant = CompilerUtils._relevant_tags_from(variables) if exact else None
+        memo = {} if exact else None
 
         # Build current values context and result
         current_values = {}
         result = []
         remaining_index = index
 
-        # Resolve each variable in order using cumulative combination count
         for var_idx, var in enumerate(variables):
             tag_name = var["tag_name"]
             mode = var.get("mode", "Sequential")
 
             if mode == "Random":
                 # Use pre-selected random value
-                result.append(random_values[tag_name])
-                current_values[tag_name] = random_values[tag_name]
+                selected = random_values.get(tag_name, "")
+                result.append(selected)
+                current_values[tag_name] = selected
+                continue
 
-            elif mode == "Sequential":
-                values = var.get("values", [])
-                if isinstance(values, list) and values:
-                    # Apply exclusions
-                    filtered_values = CompilerUtils._apply_exclusions(
-                        values, var, current_values
+            available, weights = CompilerUtils._available_pool(var, current_values)
+
+            if not available:
+                result.append("")
+                current_values[tag_name] = ""
+                continue
+
+            if mode == "ConditionalRandom":
+                # Image variables carry their own seed
+                base_seed = var.get("seed", seed)
+                var_seed = zlib.crc32(f"{base_seed}_{var_idx}".encode("utf-8"))
+                random.seed(var_seed)
+                selected = CompilerUtils._weighted_choice(available, weights)
+
+            elif exact:
+                # Walk the cumulative ranges to find which value owns this index
+                cumulative = 0
+                selected = available[0]
+                for value in available:
+                    test_context = dict(current_values)
+                    test_context[tag_name] = value
+                    count = CompilerUtils._count_subsequent_combinations(
+                        variables, var_idx + 1, test_context, relevant, memo
                     )
+                    if remaining_index < cumulative + count:
+                        selected = value
+                        remaining_index -= cumulative
+                        break
+                    cumulative += count
 
-                    # Calculate subsequent combinations for each value
-                    value_combos = []
-                    for value in filtered_values:
-                        # Simulate selecting this value
-                        test_context = dict(current_values)
-                        test_context[tag_name] = value
-                        # Count subsequent combinations
-                        sub_count = CompilerUtils._count_subsequent_combinations(
-                            variables, var_idx + 1, test_context
-                        )
-                        value_combos.append((value, sub_count))
+            else:
+                # Mixed-radix fallback: no counting at all. Still deterministic and
+                # still varied, but index is no longer a one-to-one map onto the
+                # combination space, and the first variable changes fastest.
+                selected = available[remaining_index % len(available)]
+                remaining_index //= len(available)
 
-                    # Find which value range the remaining_index falls into
-                    cumulative = 0
-                    selected_value = filtered_values[0] if filtered_values else ""
-                    for value, count in value_combos:
-                        if remaining_index < cumulative + count:
-                            selected_value = value
-                            remaining_index -= cumulative
-                            break
-                        cumulative += count
-
-                    result.append(selected_value)
-                    current_values[tag_name] = selected_value
-                else:
-                    result.append("")
-
-            elif mode == "Conditional":
-                # Get available values based on current context
-                values_dict = var.get("values", {})
-                only_flags = var.get("only_flags", {})
-                available = []
-                has_only_match = False
-
-                # Check which conditional values match and if any have --only flag
-                matching_conditions = []
-                for cond_key, cond_values in values_dict.get("conditional", {}).items():
-                    cond_dict = dict(cond_key)
-                    if CompilerUtils.matches_condition(cond_dict, current_values):
-                        matching_conditions.append((cond_key, cond_values))
-                        if only_flags.get(cond_key, False):
-                            has_only_match = True
-
-                # If any matching condition has --only, skip common values
-                if not has_only_match:
-                    available.extend(values_dict.get("common", []))
-
-                # Add conditional values that match
-                for cond_key, cond_values in matching_conditions:
-                    available.extend(cond_values)
-
-                # Apply exclusions
-                available = CompilerUtils._apply_exclusions(
-                    available, var, current_values
-                )
-
-                if available:
-                    # Calculate subsequent combinations for each available value
-                    value_combos = []
-                    for value in available:
-                        # Simulate selecting this value
-                        test_context = dict(current_values)
-                        test_context[tag_name] = value
-                        # Count subsequent combinations
-                        sub_count = CompilerUtils._count_subsequent_combinations(
-                            variables, var_idx + 1, test_context
-                        )
-                        value_combos.append((value, sub_count))
-
-                    # Find which value range the remaining_index falls into
-                    cumulative = 0
-                    selected_value = available[0]
-                    for value, count in value_combos:
-                        if remaining_index < cumulative + count:
-                            selected_value = value
-                            remaining_index -= cumulative
-                            break
-                        cumulative += count
-
-                    result.append(selected_value)
-                    current_values[tag_name] = selected_value
-                else:
-                    result.append("")
-                    current_values[tag_name] = ""
-
-            elif mode == "ConditionalRandom":
-                # Resolve based on current context, then random select
-                values_dict = var.get("values", {})
-                only_flags = var.get("only_flags", {})
-                available = []
-                has_only_match = False
-
-                # Check which conditional values match and if any have --only flag
-                matching_conditions = []
-                for cond_key, cond_values in values_dict.get("conditional", {}).items():
-                    cond_dict = dict(cond_key)
-                    if CompilerUtils.matches_condition(cond_dict, current_values):
-                        matching_conditions.append((cond_key, cond_values))
-                        if only_flags.get(cond_key, False):
-                            has_only_match = True
-
-                # If any matching condition has --only, skip common values
-                if not has_only_match:
-                    available.extend(values_dict.get("common", []))
-
-                # Add conditional values that match
-                for cond_key, cond_values in matching_conditions:
-                    available.extend(cond_values)
-
-                # Apply exclusions
-                available = CompilerUtils._apply_exclusions(
-                    available, var, current_values
-                )
-
-                # Random selection from available
-                if available:
-                    # Use image-specific seed if available
-                    image_seed = var.get("seed", seed)
-                    var_seed = zlib.crc32(f"{image_seed}_{var_idx}".encode('utf-8'))
-                    random.seed(var_seed)
-                    selected = random.choice(available)
-                    result.append(selected)
-                    current_values[tag_name] = selected
-                else:
-                    result.append("")
-                    current_values[tag_name] = ""
+            result.append(selected)
+            current_values[tag_name] = selected
 
         return result
 
     @staticmethod
-    def _count_subsequent_combinations(variables, start_index, current_context):
+    def _count_subsequent_combinations(
+        variables, start_index, current_context, relevant=None, memo=None, limit=None
+    ):
         """Count how many combinations are possible from start_index onwards
 
         Args:
             variables: list of all variables
             start_index: index to start counting from
             current_context: dict of tag_name -> value for already resolved variables
+            relevant: per-position tag sets from _relevant_tags_from (built on demand)
+            memo: shared cache; contexts that differ only in tags nobody tests
+                downstream collapse onto the same entry
+            limit: stop once the running total reaches this. The result is then a
+                lower bound - enough to report "more than N", not for index math.
 
         Returns:
             int: number of combinations
@@ -720,82 +707,61 @@ class CompilerUtils:
         if start_index >= len(variables):
             return 1
 
+        if relevant is None:
+            relevant = CompilerUtils._relevant_tags_from(variables)
+        if memo is None:
+            memo = {}
+
+        memo_key = (
+            start_index,
+            tuple(
+                sorted(
+                    (t, current_context[t])
+                    for t in relevant[start_index]
+                    if t in current_context
+                )
+            ),
+        )
+        if memo_key in memo:
+            return memo[memo_key]
+
         var = variables[start_index]
         mode = var.get("mode", "Sequential")
 
-        if mode == "Random" or mode == "ConditionalRandom":
+        if mode in ("Random", "ConditionalRandom"):
             # Random modes don't multiply combinations (always 1 choice per execution)
-            return CompilerUtils._count_subsequent_combinations(
-                variables, start_index + 1, current_context
+            total = CompilerUtils._count_subsequent_combinations(
+                variables, start_index + 1, current_context, relevant, memo, limit
             )
-
-        elif mode == "Sequential":
-            values = var.get("values", [])
-            if not values:
-                return 1
-
-            # Apply exclusions
-            filtered_values = CompilerUtils._apply_exclusions(
-                values, var, current_context
-            )
-
-            # Sum combinations for each possible value
-            total = 0
-            for value in filtered_values:
-                test_context = dict(current_context)
-                test_context[var["tag_name"]] = value
-                count = CompilerUtils._count_subsequent_combinations(
-                    variables, start_index + 1, test_context
-                )
-                total += count
+            memo[memo_key] = total
             return total
 
-        elif mode == "Conditional":
-            values_dict = var.get("values", {})
-            only_flags = var.get("only_flags", {})
-            available = []
-            has_only_match = False
+        available = CompilerUtils._available_values(var, current_context)
 
-            # Check which conditional values match and if any have --only flag
-            matching_conditions = []
-            for cond_key, cond_values in values_dict.get("conditional", {}).items():
-                cond_dict = dict(cond_key)
-                if CompilerUtils.matches_condition(cond_dict, current_context):
-                    matching_conditions.append((cond_key, cond_values))
-                    if only_flags.get(cond_key, False):
-                        has_only_match = True
-
-            # If any matching condition has --only, skip common values
-            if not has_only_match:
-                available.extend(values_dict.get("common", []))
-
-            # Add conditional values that match
-            for cond_key, cond_values in matching_conditions:
-                available.extend(cond_values)
-
-            # Apply exclusions
-            available = CompilerUtils._apply_exclusions(available, var, current_context)
-
-            if not available:
-                # No available values - use empty string and continue counting
-                test_context = dict(current_context)
-                test_context[var["tag_name"]] = ""
-                return CompilerUtils._count_subsequent_combinations(
-                    variables, start_index + 1, test_context
-                )
-
-            # Sum combinations for each available value
-            total = 0
-            for value in available:
-                test_context = dict(current_context)
-                test_context[var["tag_name"]] = value
-                count = CompilerUtils._count_subsequent_combinations(
-                    variables, start_index + 1, test_context
-                )
-                total += count
+        if not available:
+            # No available values - use empty string and continue counting
+            test_context = dict(current_context)
+            test_context[var["tag_name"]] = ""
+            total = CompilerUtils._count_subsequent_combinations(
+                variables, start_index + 1, test_context, relevant, memo, limit
+            )
+            memo[memo_key] = total
             return total
 
-        return 1
+        total = 0
+        for value in available:
+            test_context = dict(current_context)
+            test_context[var["tag_name"]] = value
+            total += CompilerUtils._count_subsequent_combinations(
+                variables, start_index + 1, test_context, relevant, memo, limit
+            )
+            if limit is not None and total >= limit:
+                # Bailing out early leaves `total` a lower bound, so it must not be
+                # cached as if it were the real count.
+                return total
+
+        memo[memo_key] = total
+        return total
 
     @staticmethod
     def _check_unused_conditions(variables, all_combos):
@@ -842,10 +808,13 @@ class CompilerUtils:
                     # Format condition for display
                     cond_parts = []
                     for cond_tag, cond_value in cond_key:
-                        if cond_value == "*":
-                            cond_parts.append(f"{cond_tag}:*")
+                        # cond_value is a (value, is_negated) pair
+                        if isinstance(cond_value, tuple):
+                            value, is_negated = cond_value
                         else:
-                            cond_parts.append(f"{cond_tag}:{cond_value}")
+                            value, is_negated = cond_value, False
+                        prefix = "!" if is_negated else ""
+                        cond_parts.append(f"{prefix}{cond_tag}:{value}")
                     cond_str = " AND ".join(cond_parts)
 
                     # Format values
@@ -855,89 +824,60 @@ class CompilerUtils:
 
                     warnings.append(
                         f"Variable '{tag_name}': Condition [{cond_str}] never matched\n"
-                        f"  → Unused values: {values_str}"
+                        f"  -> Unused values: {values_str}"
                     )
 
         return warnings
 
     @staticmethod
     def generate_all_combinations_text(variables, max_display=100):
-        """Generate text showing all combinations (for debug output)"""
-        # Calculate total combinations
-        max_combinations = CompilerUtils.calculate_combinations(variables)
+        """Generate text showing all combinations (for debug output)
 
-        # Generate combinations using resolve_index (matches actual behavior perfectly)
+        Enumerates lazily and stops at max_display. The full combination space is
+        never materialized: on a large graph it is astronomically big, and building
+        it was previously enough to exhaust system memory.
+        """
+        # _enumerate_combinations already emits "[RANDOM: a|b|c]" placeholders for
+        # Random / ConditionalRandom variables, resolved against the current context,
+        # so no post-processing is needed to rebuild them.
         all_combos = []
-        for index in range(min(max_combinations, max_display)):
-            combo = CompilerUtils.resolve_index(index, variables, seed=0)
+        truncated = False
+        for combo in CompilerUtils._enumerate_combinations(variables):
+            if len(all_combos) >= max_display:
+                truncated = True
+                break
 
-            # Format Random variables to show available choices
+            # Image variables show a count rather than a list of full paths.
             formatted_combo = []
-            for i, (var, value) in enumerate(zip(variables, combo)):
-                mode = var.get("mode", "Sequential")
-                var_type = var.get("type", "")
-
-                if mode == "Random":
-                    # Show all available choices for Random variables
-                    values = var.get("values", [])
-                    if isinstance(values, list) and values:
-                        # For images, just show count; for text, show all choices
-                        if var_type in ["Image", "image_folder"]:
-                            formatted_combo.append(f"[RANDOM: {len(values)} images]")
-                        else:
-                            choices = [v if v else "(none)" for v in values]
-                            choices_str = "|".join(str(c) for c in choices)
-                            formatted_combo.append(f"[RANDOM: {choices_str}]")
-                    else:
-                        formatted_combo.append("[RANDOM]")
-                elif mode == "ConditionalRandom":
-                    # For ConditionalRandom, show available choices based on current context
-                    values_dict = var.get("values", {})
-
-                    # Build current context from previous variables
-                    current_context = {}
-                    for j in range(i):
-                        prev_var = variables[j]
-                        if prev_var.get("mode") not in ["Random", "ConditionalRandom"]:
-                            current_context[prev_var["tag_name"]] = combo[j]
-
-                    # Get available values
-                    available = []
-                    available.extend(values_dict.get("common", []))
-                    for cond_key, cond_values in values_dict.get(
-                        "conditional", {}
-                    ).items():
-                        cond_dict = dict(cond_key)
-                        if CompilerUtils.matches_condition(cond_dict, current_context):
-                            available.extend(cond_values)
-
-                    if available:
-                        # For images, just show count; for text, show all choices
-                        if var_type in ["Image", "image_folder"]:
-                            formatted_combo.append(f"[RANDOM: {len(available)} images]")
-                        else:
-                            choices = [v if v else "(none)" for v in available]
-                            choices_str = "|".join(choices)
-                            formatted_combo.append(f"[RANDOM: {choices_str}]")
-                    else:
-                        formatted_combo.append("[RANDOM: (none)]")
+            for var, value in zip(variables, combo):
+                if (
+                    var.get("type") in ["Image", "image_folder"]
+                    and isinstance(value, str)
+                    and value.startswith("[RANDOM:")
+                ):
+                    choices = value[len("[RANDOM:") : -1].strip()
+                    count = len(choices.split("|")) if choices else 0
+                    formatted_combo.append(f"[RANDOM: {count} images]")
                 else:
                     formatted_combo.append(value)
 
             all_combos.append(formatted_combo)
 
-        # Check for unused conditional values
-        enumerated_combos = list(CompilerUtils._enumerate_combinations(variables))
-        unused_warnings = CompilerUtils._check_unused_conditions(
-            variables, enumerated_combos
-        )
+        # Unused-condition detection is only meaningful over a complete enumeration.
+        # When the list was cut short, skip it instead of reporting false positives.
+        if truncated:
+            unused_warnings = []
+        else:
+            unused_warnings = CompilerUtils._check_unused_conditions(
+                variables, all_combos
+            )
 
         lines = []
 
         # Add warnings at the top if any
         if unused_warnings:
             lines.append("=" * 70)
-            lines.append("⚠️  WARNING: Unused conditional values detected")
+            lines.append("[WARNING] Unused conditional values detected")
             lines.append("=" * 70)
             for warning in unused_warnings:
                 lines.append(warning)
@@ -955,10 +895,11 @@ class CompilerUtils:
                     # Check if this is an image variable (contains path separators)
                     if j < len(variables):
                         var_type = variables[j].get("type", "")
-                        if (
-                            var_type in ["Image", "image_folder"]
-                            and "\\" in v_str
-                            or "/" in v_str
+                        # Note the parentheses: without them this read as
+                        # (is_image and "\\" in v) or ("/" in v), which mangled any
+                        # text value containing a slash.
+                        if var_type in ["Image", "image_folder"] and (
+                            "\\" in v_str or "/" in v_str
                         ):
                             # Extract just the filename for images
                             import os
@@ -996,29 +937,10 @@ class CompilerUtils:
 
             lines.append(f"index {i}: {values_str}")
 
-        if max_combinations > max_display:
-            lines.append(
-                f"\n... and {max_combinations - max_display} more combinations"
-            )
+        if truncated:
+            lines.append(f"\n... and more combinations (showing first {max_display})")
 
         return "\n".join(lines)
-
-    @staticmethod
-    def merge_values(all_vars, seq_values, rand_values):
-        """Merge Sequential and Random values in original variable order"""
-        seq_idx = 0
-        rand_idx = 0
-        result = []
-
-        for var in all_vars:
-            if var["mode"] == "Sequential":
-                result.append(seq_values[seq_idx])
-                seq_idx += 1
-            else:  # Random
-                result.append(rand_values[rand_idx])
-                rand_idx += 1
-
-        return result
 
     @staticmethod
     def apply_template(template, variables, selected_values, separator):
@@ -1036,6 +958,7 @@ class CompilerUtils:
                 "prefix": var.get("prefix", ""),
                 "suffix": var.get("suffix", ""),
                 "index": idx,
+                "output": var.get("output_to_prompt", True),
             }
 
         # Track which tags are used
@@ -1045,8 +968,11 @@ class CompilerUtils:
         for tag_name, data in tag_data.items():
             tag = f"[{tag_name}]"
             if tag in result:
-                # Apply prefix/suffix only if value is not empty
-                if data["value"] != "":
+                # Apply prefix/suffix only if value is not empty.
+                # A control-only variable resolves to nothing even when its tag is
+                # written explicitly - otherwise "suppressed" would still leak into
+                # the prompt whenever the template happens to mention it.
+                if data["output"] and data["value"] != "":
                     replacement = f"{data['prefix']}{data['value']}{data['suffix']}"
                 else:
                     replacement = ""  # Empty value = no prefix/suffix
@@ -1057,7 +983,7 @@ class CompilerUtils:
         # Collect unused variables with prefix/suffix (filter out empty values)
         unused_values = []
         for tag_name, data in sorted(tag_data.items(), key=lambda x: x[1]["index"]):
-            if tag_name not in used_tags and data["value"] != "":
+            if tag_name not in used_tags and data["value"] != "" and data["output"]:
                 # Apply prefix/suffix to unused variables too
                 formatted_value = f"{data['prefix']}{data['value']}{data['suffix']}"
                 unused_values.append(formatted_value)
@@ -1089,86 +1015,7 @@ class CompilerUtils:
         """Simple join mode with prefix/suffix (filter out empty values)"""
         formatted_values = []
         for var, value in zip(variables, selected_values):
-            if value != "":
+            if value != "" and var.get("output_to_prompt", True):
                 formatted = f"{var.get('prefix', '')}{value}{var.get('suffix', '')}"
                 formatted_values.append(formatted)
         return separator.join(formatted_values)
-
-    @staticmethod
-    def _reorder_to_little_endian(combinations, variables):
-        """Reorder combinations from big-endian to little-endian to match resolve_index
-
-        Big-endian (enumerate): First variable fixed, iterate through rest
-        Little-endian (resolve): First variable changes fastest (modulo)
-        """
-        if not combinations:
-            return combinations
-
-        # Get only Sequential and Conditional variables (ignore Random)
-        sequential_vars = [
-            v
-            for v in variables
-            if v.get("mode") in ["Sequential", "Conditional", "ConditionalRandom"]
-        ]
-
-        if len(sequential_vars) <= 1:
-            return combinations  # No reordering needed
-
-        # Check if any conditional variables exist
-        has_conditional = any(
-            v.get("mode") in ["Conditional", "ConditionalRandom"]
-            for v in sequential_vars
-        )
-
-        if has_conditional:
-            # With conditional variables, stride calculation is complex
-            # Skip reordering for now
-            # TODO: Implement proper reordering for conditional variables
-            return combinations
-
-        # Calculate stride sizes for each variable
-        strides = []
-        for var in sequential_vars:
-            # Count how many values this variable can have in current context
-            mode = var.get("mode")
-            if mode == "Sequential":
-                stride = len(var.get("values", []))
-            elif mode in ["Conditional", "ConditionalRandom"]:
-                # For conditional, use common + all conditional values
-                values_dict = var.get("values", {})
-                common = values_dict.get("common", [])
-                conditional_all = []
-                for cond_vals in values_dict.get("conditional", {}).values():
-                    conditional_all.extend(cond_vals)
-                stride = len(common) + len(conditional_all)
-            else:
-                stride = 1
-            strides.append(stride)
-
-        # Create index mapping from big-endian to little-endian
-        total = len(combinations)
-        reordered = [None] * total
-
-        for big_endian_idx in range(total):
-            # Convert big-endian index to variable indices
-            remaining = big_endian_idx
-            var_indices = []
-            for stride in reversed(strides):  # Right to left for big-endian
-                if stride > 0:
-                    var_indices.insert(0, remaining % stride)
-                    remaining //= stride
-                else:
-                    var_indices.insert(0, 0)
-
-            # Convert variable indices to little-endian index
-            little_endian_idx = 0
-            multiplier = 1
-            for var_idx, stride in zip(
-                var_indices, strides
-            ):  # Left to right for little-endian
-                little_endian_idx += var_idx * multiplier
-                multiplier *= stride
-
-            reordered[little_endian_idx] = combinations[big_endian_idx]
-
-        return reordered

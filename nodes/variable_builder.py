@@ -124,9 +124,9 @@ class SBTools_VariableBuilder:
             prompt = ""
 
         # Build current_values context for conditional image resolution
+        # (text_values was already resolved above - no need to resolve twice)
         current_values = {}
         if text_vars:
-            text_values = CompilerUtils.resolve_index(safe_index, text_vars, seed)
             for var, value in zip(text_vars, text_values):
                 current_values[var["tag_name"]] = value
 

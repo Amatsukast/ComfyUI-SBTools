@@ -3,6 +3,8 @@
 # Copyright (c) Amatsukast
 # Licensed under GPL-3.0
 
+import re
+
 from .compiler_utils import CompilerUtils
 
 
@@ -15,6 +17,12 @@ class SBTools_VariablePrompt:
             "randomize": "Enable random selection (off = sequential cycle through all values)",
             "prefix": "Text to add before value (only in tag mode, ignored if value is empty)",
             "suffix": "Text to add after value (only in tag mode, ignored if value is empty)",
+            "output_to_prompt": (
+                "Include this variable in the generated prompt. Turn OFF to make it a "
+                "control-only variable: it still picks a value and other variables can "
+                "still branch on it, but it never appears in the output - not even if "
+                "its [TAG] is written in the template."
+            ),
             "var_list": "Optional: Connect previous variable to enable conditional logic based on its values",
         }
         return {
@@ -43,6 +51,13 @@ class SBTools_VariablePrompt:
                     "STRING",
                     {"default": "", "tooltip": tooltips["suffix"]},
                 ),
+                # Declared last on purpose: ComfyUI maps widgets_values positionally,
+                # so appending keeps older saved workflows loading unchanged (the
+                # missing trailing entry falls back to this default).
+                "output_to_prompt": (
+                    "BOOLEAN",
+                    {"default": True, "tooltip": tooltips["output_to_prompt"]},
+                ),
             },
             "optional": {
                 "var_list": ("VARIABLE_LIST", {"tooltip": tooltips["var_list"]}),
@@ -56,7 +71,14 @@ class SBTools_VariablePrompt:
     OUTPUT_NODE = False
 
     def create_variable(
-        self, tag_name, values, randomize, prefix, suffix, var_list=None
+        self,
+        tag_name,
+        values,
+        randomize,
+        prefix,
+        suffix,
+        var_list=None,
+        output_to_prompt=True,
     ):
         # Inherit previous var_list
         result = list(var_list) if var_list else []
@@ -80,6 +102,7 @@ class SBTools_VariablePrompt:
             variable_data = {
                 "tag_name": tag_name,
                 "values": parsed["values"],  # {"common": [...], "conditional": {...}}
+                "weights": parsed.get("weights"),
                 "exclusions": parsed.get(
                     "exclusions", {"common": [], "conditional": {}}
                 ),
@@ -87,12 +110,14 @@ class SBTools_VariablePrompt:
                 "mode": "ConditionalRandom" if randomize else "Conditional",
                 "prefix": prefix,
                 "suffix": suffix,
+                "output_to_prompt": output_to_prompt,
             }
         else:
             # Normal variable
             variable_data = {
                 "tag_name": tag_name,
                 "values": parsed["values"],  # [...]
+                "weights": parsed.get("weights"),
                 "exclusions": parsed.get(
                     "exclusions", {"common": [], "conditional": {}}
                 ),
@@ -100,18 +125,21 @@ class SBTools_VariablePrompt:
                 "mode": "Random" if randomize else "Sequential",
                 "prefix": prefix,
                 "suffix": suffix,
+                "output_to_prompt": output_to_prompt,
             }
 
         result.append(variable_data)
         return (result,)
 
     def _parse_values(self, values_text, previous_vars):
-        """Parse values text with optional conditional syntax and exclusions"""
+        """Parse values text with optional conditional syntax, exclusions and weights"""
         lines = values_text.split("\n")
 
         common = []
+        common_weights = []
         common_exclusions = []  # For --value syntax
         conditional = {}
+        conditional_weights = {}
         conditional_exclusions = {}  # For --value syntax in conditional blocks
         only_flags = {}  # Store --only flags for conditions
         has_conditions = False
@@ -125,16 +153,26 @@ class SBTools_VariablePrompt:
             if not stripped:
                 continue
 
+            # Split off a trailing weight ("naked --3") before anything else, so it
+            # works on [NONE] too. Exclusion lines start with "--" and are skipped:
+            # the marker is positional, start of line means exclude, end means weight.
+            weight = 1.0
+            if not stripped.startswith("--"):
+                stripped, weight = self._split_weight(stripped)
+
             # Handle [NONE] explicitly as empty value
             if stripped == "[NONE]":
                 if current_condition is None:
                     common.append("")
+                    common_weights.append(weight)
                 else:
                     if isinstance(current_condition, list):
                         for cond_key in current_condition:
                             if cond_key not in conditional:
                                 conditional[cond_key] = []
+                                conditional_weights[cond_key] = []
                             conditional[cond_key].append("")
+                            conditional_weights[cond_key].append(weight)
                 continue
 
             # Check if condition line
@@ -173,10 +211,10 @@ class SBTools_VariablePrompt:
                     # Warn if condition didn't match anything
                     if not current_condition:
                         print(
-                            f"\033[93m⚠️  WARNING: Condition '{stripped}' did not match any values in previous variables\033[0m"
+                            f"\033[93m[WARNING] Condition '{stripped}' did not match any values in previous variables\033[0m"
                         )
                         print(
-                            f"\033[93m   → Values following this condition will be ignored\033[0m"
+                            f"\033[93m   -> Values following this condition will be ignored\033[0m"
                         )
             else:
                 # Value line - check for exclusion syntax (--value)
@@ -193,7 +231,7 @@ class SBTools_VariablePrompt:
                         if isinstance(current_condition, list):
                             if not current_condition:
                                 print(
-                                    f"\033[93m   → Ignoring exclusion: '--{value_to_exclude}'\033[0m"
+                                    f"\033[93m   -> Ignoring exclusion: '--{value_to_exclude}'\033[0m"
                                 )
                             else:
                                 for cond_key in current_condition:
@@ -206,25 +244,32 @@ class SBTools_VariablePrompt:
                     # Normal value line
                     if current_condition is None:
                         common.append(stripped)
+                        common_weights.append(weight)
                     else:
                         # current_condition is a list of condition keys (for OR expansion)
                         if isinstance(current_condition, list):
                             if not current_condition:
                                 # Empty condition - value will be ignored
                                 print(
-                                    f"\033[93m   → Ignoring value: '{stripped}'\033[0m"
+                                    f"\033[93m   -> Ignoring value: '{stripped}'\033[0m"
                                 )
                             else:
                                 # Multiple conditions (OR) - add to all
                                 for cond_key in current_condition:
                                     if cond_key not in conditional:
                                         conditional[cond_key] = []
+                                        conditional_weights[cond_key] = []
                                     conditional[cond_key].append(stripped)
+                                    conditional_weights[cond_key].append(weight)
 
         if has_conditions:
             return {
                 "has_conditions": True,
                 "values": {"common": common, "conditional": conditional},
+                "weights": {
+                    "common": common_weights,
+                    "conditional": conditional_weights,
+                },
                 "exclusions": {
                     "common": common_exclusions,
                     "conditional": conditional_exclusions,
@@ -235,16 +280,35 @@ class SBTools_VariablePrompt:
             # No conditions - return simple list
             return {
                 "has_conditions": False,
-                "values": (
-                    common
-                    if common
-                    else [
-                        v.strip() for v in lines if v.strip() and v.strip() != "[NONE]"
-                    ]
-                ),
+                "values": common,
+                "weights": common_weights,
                 "exclusions": {"common": common_exclusions, "conditional": {}},
                 "only_flags": {},
             }
+
+    @staticmethod
+    def _split_weight(stripped):
+        """Split a trailing "--N" weight off a value line.
+
+        "naked --3" -> ("naked", 3.0);  "naked" -> ("naked", 1.0)
+
+        A weight means "N copies of this line", so integers read naturally; decimals
+        are accepted for fine adjustment. Anything after "--" that is not a
+        non-negative number is left alone and stays part of the value, so values that
+        legitimately end in "--something" are not damaged.
+        """
+        match = re.search(r"\s--(-?\d+(?:\.\d+)?)\s*$", stripped)
+        if not match:
+            return stripped, 1.0
+
+        weight = float(match.group(1))
+        if weight < 0:
+            raise ValueError(
+                f"Negative weight in value line: '{stripped}'. "
+                f"Weights mean 'how many copies of this line', so they cannot be "
+                f"negative. Use --0 to disable a value."
+            )
+        return stripped[: match.start()].strip(), weight
 
     def _parse_condition_line_with_options(self, line):
         """Parse condition line and extract --only option
@@ -271,6 +335,8 @@ class SBTools_VariablePrompt:
 
         # Check for --only flag
         is_only = "--only" in options_part
+
+        CompilerUtils.warn_unparsed_condition_tail(line, options_part, ["--only"])
 
         return condition, is_only
 

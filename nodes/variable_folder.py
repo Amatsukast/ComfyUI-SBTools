@@ -308,6 +308,10 @@ class SBTools_VariableFolder:
         # Check for --only flag
         is_only = "--only" in options_part
 
+        CompilerUtils.warn_unparsed_condition_tail(
+            line, options_part, ["--only", "--random", "--sequential"]
+        )
+
         return condition, mode, is_only
 
     def _parse_path_line(self, line):
