@@ -63,15 +63,17 @@ class SBTools_VariableBuilder:
             },
         }
 
-    RETURN_TYPES = ("STRING", "IMAGE", "IMAGE", "IMAGE", "IMAGE", "INT", "STRING")
+    # MAX_COMBINATIONS and ALL_COMBINATIONS moved to the Variable Debug node in 2.0.0.
+    # They were observation outputs, so every execution paid for them whether or not
+    # anyone looked. They were the last two slots, so removing them leaves the
+    # numbering of PROMPT and the images untouched.
+    RETURN_TYPES = ("STRING", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
     RETURN_NAMES = (
         "PROMPT",
         "IMAGE1",
         "IMAGE2",
         "IMAGE3",
         "IMAGE4",
-        "MAX_COMBINATIONS",
-        "ALL_COMBINATIONS",
     )
     FUNCTION = "compile"
     CATEGORY = "SBTools/Prompt"
@@ -88,7 +90,7 @@ class SBTools_VariableBuilder:
         empty_image = torch.zeros((1, 64, 64, 3))
 
         if not variables:
-            return ("", empty_image, empty_image, empty_image, empty_image, 1, "")
+            return ("", empty_image, empty_image, empty_image, empty_image)
 
         # Separate text and image variables for output purposes
         # Note: image_folder variables contain image paths (loaded in VariableFolder)
@@ -103,7 +105,7 @@ class SBTools_VariableBuilder:
         max_combinations = CompilerUtils.calculate_combinations(variables)
 
         if max_combinations == 0:
-            return ("", empty_image, empty_image, empty_image, empty_image, 1, "")
+            return ("", empty_image, empty_image, empty_image, empty_image)
 
         safe_index = index % max_combinations
 
@@ -184,26 +186,12 @@ class SBTools_VariableBuilder:
         while len(loaded_images) < 4:
             loaded_images.append(empty_image)
 
-        # Generate debug output (enumerates all combinations)
-        # Include both text and image variables
-        all_combinations_text = CompilerUtils.generate_all_combinations_text(variables)
-
-        # Also print warnings to console if present
-        if text_vars and "⚠️" in all_combinations_text:
-            # Extract warning section
-            warning_lines = all_combinations_text.split("=" * 70)
-            if len(warning_lines) >= 3:
-                warning_section = warning_lines[1].strip()
-                print(f"\033[93m{warning_section}\033[0m")
-
         return (
             prompt,
             loaded_images[0],
             loaded_images[1],
             loaded_images[2],
             loaded_images[3],
-            max_combinations,
-            all_combinations_text,
         )
 
     def _load_image_as_tensor(

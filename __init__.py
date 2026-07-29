@@ -1,6 +1,6 @@
 """ComfyUI-SBTools - Custom Node Collection"""
 
-__version__ = "1.6.0"
+__version__ = "2.0.0"
 
 from .nodes.birefnet_node import NODE_CLASS_MAPPINGS as BIREFNET_MAPPINGS
 from .nodes.birefnet_node import NODE_DISPLAY_NAME_MAPPINGS as BIREFNET_DISPLAY
@@ -18,6 +18,8 @@ from .nodes.variable_image_loader import (
 )
 from .nodes.variable_builder import NODE_CLASS_MAPPINGS as VARBUILDER_MAPPINGS
 from .nodes.variable_builder import NODE_DISPLAY_NAME_MAPPINGS as VARBUILDER_DISPLAY
+from .nodes.variable_debug import NODE_CLASS_MAPPINGS as VARDEBUG_MAPPINGS
+from .nodes.variable_debug import NODE_DISPLAY_NAME_MAPPINGS as VARDEBUG_DISPLAY
 from .nodes.match_color import NODE_CLASS_MAPPINGS as MATCHCOLOR_MAPPINGS
 from .nodes.match_color import NODE_DISPLAY_NAME_MAPPINGS as MATCHCOLOR_DISPLAY
 from .nodes.match_color_balance import NODE_CLASS_MAPPINGS as MATCHCOLORBALANCE_MAPPINGS
@@ -37,6 +39,7 @@ NODE_CLASS_MAPPINGS = {
     **VARCOMB_MAPPINGS,
     **VARIMGLOADER_MAPPINGS,
     **VARBUILDER_MAPPINGS,
+    **VARDEBUG_MAPPINGS,
     **MATCHCOLOR_MAPPINGS,
     **MATCHCOLORBALANCE_MAPPINGS,
     **MATCHLUMINANCE_MAPPINGS,
@@ -51,6 +54,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **VARCOMB_DISPLAY,
     **VARIMGLOADER_DISPLAY,
     **VARBUILDER_DISPLAY,
+    **VARDEBUG_DISPLAY,
     **MATCHCOLOR_DISPLAY,
     **MATCHCOLORBALANCE_DISPLAY,
     **MATCHLUMINANCE_DISPLAY,

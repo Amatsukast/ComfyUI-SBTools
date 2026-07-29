@@ -5,6 +5,58 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-30
+
+### ⚠️ Breaking Changes
+
+- **Variable Builder: `MAX_COMBINATIONS` and `ALL_COMBINATIONS` outputs removed**
+  - Moved to the new **Variable Debug** node. Connect that instead.
+  - They were observation outputs computed on *every* execution whether or not anything was connected to them.
+  - They were the last two output slots, so `PROMPT` and `IMAGE1`–`IMAGE4` keep their positions and their links survive. Only links from the two removed slots are dropped.
+- **Generated results change for the same seed.** Conditions that were silently dropped now apply (see below), so the pool of available values is different. This is unavoidable — the previous results were produced by conditions that were not fully in effect.
+
+### Added
+
+- **Variable Debug node** (`SBTools/Prompt`)
+  - Lists the first N combinations and, optionally, the total count.
+  - `max_display` (default 100) — enumeration stops there, so cost does not grow with graph size.
+  - `show_total` (default **off**) — counting is the expensive part, and on a large conditional graph the exact number is unreachable anyway.
+  - Takes only `var_list`, so ComfyUI caches it: changing `seed`/`index` on the Builder does not re-run it.
+  - Can be attached partway through a Combiner tree to inspect an intermediate state.
+- **Value weights: `--N` suffix**
+  - `naked --3` means "3 copies of this line" — exactly equivalent to writing the line 3 times.
+  - Works on `[NONE] --20` too. Decimals allowed (`--0.5`); `--0` disables a value without deleting it.
+  - Duplicate lines add up, and a value present in both the common list and a matching conditional block contributes both weights.
+  - Applies to **Random / ConditionalRandom** only — Sequential enumerates every value exactly once, so weights have no meaning there.
+  - Negative weights raise an error. The marker is positional: `--` at the *start* of a line is still the exclusion syntax.
+- **`output_to_prompt` toggle on Variable Prompt** (default on)
+  - Turn off to make a control-only variable: it still resolves a value and other variables can still branch on it, but it never reaches the prompt — not even when its `[TAG]` is written in the template.
+  - Declared as the last widget, so existing saved workflows load unchanged.
+- **Condition diagnostics**
+  - `[TAG:value]` was previously accepted with no validation at all. Now warns when the tag does not exist, when the value is not one of that tag's values, or when the tag belongs to a variable connected *after* this one (conditions can only see earlier variables).
+  - Warns when a condition line has content past the first `]`, instead of discarding it silently.
+
+### Fixed
+
+- **Conditions could not hold more than one constraint per tag.** `[!CLOTHING:naked&&!CLOTHING:bikini]` kept only the last one, because condition keys were collapsed through a `dict()`. All constraints now apply.
+- **Logically identical conditions gave different results depending on the order they were written in.** A side effect of the above: `[A&&C||B&&C]` and `[B&&C||A&&C]` resolved differently, and which one worked depended on alphabetical ordering of the values.
+- **Combination counting exhausted memory.** The total was obtained by materializing every combination in a list and taking its length. Counting is now arithmetic, memoised, and capped (`COMBINATION_LIMIT`, 100,000); `resolve_index` falls back to a non-counting strategy above that. A graph with conditional variables can describe more combinations than can ever be enumerated.
+- **The debug listing re-derived every entry from scratch.** It called `resolve_index` once per line, and each of those calls counted the whole combination space — the 100-line cap bounded the output but not the work. It now enumerates lazily and stops at the limit.
+- **A variable with no values dead-ended enumeration.** Because it yielded nothing instead of resolving to empty, the search backtracked through every earlier combination without ever producing a result, which looked like a hang.
+- **A graph made only of Conditional variables reported 1 combination** and its index never advanced. Counting required a variable in `Sequential` mode specifically.
+- **Console output crashed on non-UTF-8 terminals.** Warning messages used `⚠️` and `→`, which raise `UnicodeEncodeError` under code pages such as cp932 (Japanese Windows). All console output is now ASCII.
+- Text values containing `/` were truncated to their last path segment in the debug listing, due to operator precedence in the image-path check.
+- Variable Builder resolved the same values twice per execution.
+
+### Notes on condition syntax
+
+`&&` separates groups and `||` lists alternatives *within* a group, so a condition reads as
+`[A||B && C||D]` = (A or B) and (C or D). This was never documented and is unchanged, but it is
+worth stating explicitly now that constraints are no longer silently dropped: write
+`[COMPOSITION:breast focus||COMPOSITION:upper body&&POSE_CATEGORY:sitting pose]`, not
+`[COMPOSITION:breast focus&&POSE_CATEGORY:sitting pose||COMPOSITION:upper body&&POSE_CATEGORY:sitting pose]`.
+A condition is a single bracketed expression — `[A]&&[B]` is not valid and now warns.
+
 ## [1.6.0] - 2026-05-27
 
 ### Added

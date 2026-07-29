@@ -14,7 +14,8 @@ Custom node collection for ComfyUI. Background removal, color analysis, and dyna
 | Variable Folder (SBTools)        | SBTools/Image  | Define conditional image folder mappings based on variable context       |
 | Variable Image Loader (SBTools)  | SBTools/Image  | Load images from folder with pattern matching and flexible control       |
 | Variable Combiner (SBTools)      | SBTools/Prompt | Combine multiple variable lists for unlimited expansion                  |
-| Variable Builder (SBTools)       | SBTools/Prompt | Generate prompts and load images with debug info and combination details |
+| Variable Builder (SBTools)       | SBTools/Prompt | Generate prompts and load images from a variable list                    |
+| Variable Debug (SBTools)         | SBTools/Prompt | Inspect a variable list: first N combinations and total count            |
 | Match Color (SBTools) \*         | SBTools/Image  | Match color distribution between images (Lab/RGB/Adaptive)               |
 | Match Color Balance (SBTools) \* | SBTools/Image  | Match color temperature and tint (MKL/Shift methods)                     |
 | Match Luminance (SBTools) \*     | SBTools/Image  | Match brightness levels between images                                   |
@@ -413,11 +414,63 @@ formal vest
 
 Result: man+middle gets "suit, ~~t-shirt~~, jacket, formal vest"
 
+#### Operator Precedence
+
+`&&` separates groups, `||` lists alternatives **within** a group:
+
+```
+[A||B&&C||D]     =  (A or B) and (C or D)
+```
+
+A condition is a **single bracketed expression**. `[A]&&[B]` is not valid — everything after
+the first `]` is read as flags, and unrecognised text is ignored with a warning.
+
+This matters when combining an OR with an AND. To express "(breast focus or upper body) and
+sitting pose":
+
+```
+[COMPOSITION:breast focus||COMPOSITION:upper body&&POSE_CATEGORY:sitting pose]     correct
+[COMPOSITION:breast focus&&POSE_CATEGORY:sitting pose||COMPOSITION:upper body&&POSE_CATEGORY:sitting pose]
+```
+
+The second line does **not** mean what it looks like: it reads as
+`breast focus and (sitting pose or upper body) and sitting pose`, so the "upper body" case
+never matches.
+
+#### Value Weights
+
+> Variable Prompt only. Variable Folder uses `--` suffixes for path options
+> (`--pattern=`, `--subfolder`, …) and does not take weights.
+
+Add `--N` to the **end** of a value line to make it more or less likely. `--N` means
+"N copies of this line" — `naked --3` is exactly equivalent to writing `naked` three times:
+
+```
+naked --3
+bikini
+[NONE] --20
+```
+
+- Default weight is `1`. Decimals are allowed (`--0.5`), though any ratio can also be written
+  with integers — starting from a base like `--10` lets you adjust one line without touching
+  the others.
+- `--0` disables a value without deleting it. If every value in the pool is `--0`, the
+  variable resolves to empty.
+- Duplicate lines add up, and a value present in both the common list and a matching
+  conditional block contributes both weights.
+- **Random / ConditionalRandom only.** Sequential and Conditional visit every value exactly
+  once, so weights have no meaning there and are ignored.
+- Position distinguishes it from exclusion: `--` at the **start** of a line removes a value,
+  `--N` at the **end** weights it.
+
 #### Usage Notes
 
 - **Case sensitivity**: Condition values are case-sensitive
 - **Connection required**: Connect `var_list` output to enable conditional logic
 - **Order matters**: Use `[*]` to return to common values after conditional sections
+- **Warnings**: A `[TAG:value]` naming an unknown tag, a value that tag never produces, or a
+  variable connected *after* this one is reported in the console. Conditions can only
+  reference variables that come earlier in the chain.
 - **Combining features**: All syntax features can be combined (NOT + --only, etc.)
 - **Best practices**:
   - Use `--only` for complete replacement (clearer intent)
@@ -440,9 +493,15 @@ Define a single variable with multiple values. Variables can operate in four mod
 - `values` - List of values, one per line
   - Use empty line or `[NONE]` for "no value" option
   - Use `[condition]` syntax for conditional values (see Conditional Syntax section)
+  - Add `--N` at the end of a line to weight it (see Value Weights section)
 - `randomize` - Toggle between modes:
   - **OFF (Sequential/Conditional)**: Cycle through all values systematically
   - **ON (Random/ConditionalRandom)**: Pick one value randomly each execution
+- `output_to_prompt` - Include this variable in the generated prompt (default: ON)
+  - Turn **OFF** to make a **control-only variable**: it still resolves a value and other
+    variables can still branch on it, but it never appears in the output
+  - Suppression is absolute — the value is omitted even if `[TAG]` is written in the template
+  - Useful for category selectors that steer other variables but should not be prompt text
 
 **Optional:**
 
@@ -779,8 +838,11 @@ Generate prompts and load images with full debug information. Supports text-only
 
 - `prompt` - Generated prompt text (STRING)
 - `image1-4` - Loaded images (IMAGE × 4, empty if no image variables)
-- `max_combinations` - Total number of sequential combinations (INT)
-- `all_combinations` - Debug text listing all patterns with index numbers (STRING)
+
+> **Changed in 2.0.0:** `max_combinations` and `all_combinations` moved to the
+> [Variable Debug](#variable-debug) node. They were computed on every execution even when
+> nothing was connected to them; as a separate node they are only paid for when used, and
+> ComfyUI can cache the result.
 
 **Modes:**
 
@@ -799,8 +861,6 @@ Generate prompts and load images with full debug information. Supports text-only
 - **Up to 4 images**: Perfect for FLUX.2 Reference workflow with multiple reference images
 - **Independent seed control**: Each Image Variable uses its own seed, text variables use Variable Builder's seed
 - **Full combination calculation**: All Sequential text × Sequential images × Random variations
-- **Debug output**: `max_combinations` shows total patterns, `all_combinations` lists all with index
-- **Random preview**: Shows `[RANDOM: choice1|choice2|...]` for random variables in debug output
 - **Empty slot handling**: Unused image slots automatically filled with blank images
 
 **Example Workflow:**
@@ -844,8 +904,7 @@ Total: 3 × 4 × 5 × 3 = 180 combinations
 
 - Connect Primitive (INT, increment) to `index` for sequential patterns
 - Connect Primitive (INT, increment) to `seed` for random variations
-- Use `max_combinations` output to know total patterns
-- Connect `all_combinations` to Show Text node to see all patterns
+- Add a Variable Debug node to see the total count and the first N patterns
 
 **For FLUX.2 JSON-style prompts:**
 
@@ -869,7 +928,47 @@ Total: 3 × 4 × 5 × 3 = 180 combinations
 - Image Variables maintain their own randomize/seed settings
 - Empty image slots output blank images when using fewer than 4 Image Variables
 - Use same `index` from Primitive (increment) for synchronized batch processing
-- Performance: 10,000+ combinations enumerate quickly (under 1 second)
+
+#### Variable Debug
+
+Inspect a variable list: list the first N combinations, and optionally count the total.
+Useful for checking that conditions resolve the way you intended before running a batch.
+
+**Parameters:**
+
+**Required:**
+
+- `max_display` - How many combinations to list (default: 100)
+  - Enumeration stops there, so the cost does not grow with the size of the graph
+  - Set to `0` to skip the listing and only report the total
+- `show_total` - Count the total number of combinations (default: **OFF**)
+  - Counting is the expensive part. On a large conditional graph the exact number is
+    unreachable, so counting stops at 100,000 and the result is shown as `100,000+`
+
+**Optional:**
+
+- `var_list` - Variable list from Variable Prompt, Variable Folder, Variable Image Loader, or Variable Combiner
+
+**Outputs:**
+
+- `COMBINATIONS` - The listing (STRING). Also displayed on the node itself
+- `TOTAL` - Total combinations (INT), or `0` when `show_total` is off
+
+**Notes:**
+
+- Takes nothing but `var_list`, so ComfyUI caches it — changing `seed` or `index` on the
+  Variable Builder does not re-run it. Only editing the variables does.
+- Can be attached anywhere, including partway through a Combiner tree, to see what is
+  visible at that point in the chain.
+- Random / ConditionalRandom variables appear as `[RANDOM: choice1|choice2|...]` showing the
+  choices available in that context. They do not expand into separate combinations, so a
+  graph where every variable is Random has exactly one combination.
+
+```
+Variable Prompt ─┬─→ Variable Combiner ─┬─→ Variable Builder → prompt
+                 │                      └─→ Variable Debug   → listing
+Variable Prompt ─┘
+```
 
 ## Image Processing
 
@@ -1155,6 +1254,20 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 ### Version History
+
+**v2.0.0 (2026-07-30)** - Variable System overhaul
+
+- **Breaking**: `MAX_COMBINATIONS` / `ALL_COMBINATIONS` moved from Variable Builder to the new Variable Debug node
+- **Breaking**: results change for the same seed — conditions that were silently dropped now apply
+- New Variable Debug node with configurable listing size and opt-in total count
+- Value weights (`--N`) for Random / ConditionalRandom variables
+- `output_to_prompt` toggle for control-only variables
+- Fixed: conditions could hold only one constraint per tag, so `[!A:x&&!A:y]` lost one
+- Fixed: logically identical conditions behaved differently depending on the order written
+- Fixed: combination counting exhausted memory; counting is now capped and memoised
+- Fixed: a variable with no values dead-ended enumeration and looked like a hang
+- Fixed: console warnings crashed on non-UTF-8 terminals (cp932 and similar)
+- New warnings for conditions that can never match
 
 **v1.6.0 (2026-05-27)** - Utilities
 
