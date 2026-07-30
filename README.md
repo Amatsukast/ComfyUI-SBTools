@@ -1,6 +1,6 @@
 # ComfyUI-SBTools
 
-**Latest Version: 1.6.0**
+**Latest Version: 2.0.0**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
@@ -183,7 +183,7 @@ This example demonstrates complex conditional logic with multiple conditions:
 
 - Complex condition syntax: `&&` (AND), `||` (OR), `[*]` (wildcard)
 - ConditionalRandom mode: Random selection within available conditional values
-- Variable Builder shows all combinations with debug output
+- Variable Debug lists the combinations for checking
 
 **Result:**
 
@@ -306,7 +306,8 @@ The prompt and image generation system consists of these nodes:
 2. **Variable Folder** - Define conditional image folder mappings (optional, for context-aware images)
 3. **Variable Image Loader** - Load images from folder with flexible control
 4. **Variable Combiner** - Combine multiple variables into lists (optional, for complex workflows)
-5. **Variable Builder** - Generate prompts and load images with debug info
+5. **Variable Builder** - Generate prompts and load images
+6. **Variable Debug** - Inspect a variable list (optional, for checking conditions)
 
 #### Quick Start
 
@@ -817,7 +818,7 @@ Variable Combiner automatically checks for duplicate variables:
 
 #### Variable Builder
 
-Generate prompts and load images with full debug information. Supports text-only workflows, image workflows, or combined workflows.
+Generate prompts and load images. Supports text-only workflows, image workflows, or combined workflows. To inspect what the variables can resolve to, add a [Variable Debug](#variable-debug) node.
 
 **Parameters:**
 
