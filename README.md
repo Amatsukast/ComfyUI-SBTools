@@ -951,7 +951,7 @@ Useful for checking that conditions resolve the way you intended before running 
 
 **Outputs:**
 
-- `COMBINATIONS` - The listing (STRING). Also displayed on the node itself
+- `COMBINATIONS` - The listing (STRING). Connect it to a preview node to read it
 - `TOTAL` - Total combinations (INT), or `0` when `show_total` is off
 
 **Notes:**

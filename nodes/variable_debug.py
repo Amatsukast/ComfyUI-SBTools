@@ -15,6 +15,8 @@ class SBTools_VariableDebug:
 
     It can be attached anywhere in the chain, including partway through a Combiner
     tree, to see what a variable can resolve to at that point.
+
+    Connect COMBINATIONS to a preview node to read the listing.
     """
 
     @classmethod
@@ -57,14 +59,16 @@ class SBTools_VariableDebug:
     RETURN_NAMES = ("COMBINATIONS", "TOTAL")
     FUNCTION = "inspect"
     CATEGORY = "SBTools/Prompt"
-    OUTPUT_NODE = True
+    # Not an OUTPUT_NODE: rendering text on the node itself would need a frontend
+    # extension, and this package ships no web assets. Connect COMBINATIONS to a
+    # preview node instead.
+    OUTPUT_NODE = False
 
     def inspect(self, max_display, show_total, var_list=None):
         variables = var_list if var_list else []
 
         if not variables:
-            text = "(no variables connected)"
-            return {"ui": {"text": [text]}, "result": (text, 0)}
+            return ("(no variables connected)", 0)
 
         lines = []
 
@@ -98,8 +102,7 @@ class SBTools_VariableDebug:
                 )
             )
 
-        text = "\n".join(lines)
-        return {"ui": {"text": [text]}, "result": (text, total)}
+        return ("\n".join(lines), total)
 
 
 NODE_CLASS_MAPPINGS = {"SBTools_VariableDebug": SBTools_VariableDebug}
