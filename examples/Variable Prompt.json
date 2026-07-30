@@ -1,8 +1,8 @@
 {
   "id": "056e9d3b-0b50-4aba-a87b-662002b81a64",
   "revision": 0,
-  "last_node_id": 33,
-  "last_link_id": 105,
+  "last_node_id": 34,
+  "last_link_id": 108,
   "nodes": [
     {
       "id": 6,
@@ -22,7 +22,7 @@
         {
           "name": "source",
           "type": "*",
-          "link": 99
+          "link": 107
         }
       ],
       "outputs": [],
@@ -55,7 +55,7 @@
         {
           "name": "source",
           "type": "*",
-          "link": 98
+          "link": 108
         }
       ],
       "outputs": [],
@@ -127,7 +127,8 @@
           "name": "var_list",
           "type": "VARIABLE_LIST",
           "links": [
-            104
+            104,
+            106
           ]
         }
       ],
@@ -360,20 +361,6 @@
           "name": "image4",
           "type": "IMAGE",
           "links": null
-        },
-        {
-          "name": "max_combinations",
-          "type": "INT",
-          "links": [
-            98
-          ]
-        },
-        {
-          "name": "all_combinations",
-          "type": "STRING",
-          "links": [
-            99
-          ]
         }
       ],
       "properties": {
@@ -466,6 +453,54 @@
         0,
         "increment"
       ]
+    },
+    {
+      "id": 34,
+      "type": "SBTools_VariableDebug",
+      "pos": [
+        1680,
+        580
+      ],
+      "size": [
+        280,
+        106
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "var_list",
+          "shape": 7,
+          "type": "VARIABLE_LIST",
+          "link": 106
+        }
+      ],
+      "outputs": [
+        {
+          "name": "COMBINATIONS",
+          "type": "STRING",
+          "links": [
+            107
+          ]
+        },
+        {
+          "name": "TOTAL",
+          "type": "INT",
+          "links": [
+            108
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-SBTools",
+        "ver": "2.0.0",
+        "Node name for S&R": "SBTools_VariableDebug"
+      },
+      "widgets_values": [
+        100,
+        true
+      ]
     }
   ],
   "links": [
@@ -474,22 +509,6 @@
       33,
       0,
       5,
-      0,
-      "STRING"
-    ],
-    [
-      98,
-      33,
-      5,
-      7,
-      0,
-      "INT"
-    ],
-    [
-      99,
-      33,
-      6,
-      6,
       0,
       "STRING"
     ],
@@ -539,6 +558,30 @@
       0,
       33,
       1,
+      "INT"
+    ],
+    [
+      106,
+      28,
+      0,
+      34,
+      0,
+      "VARIABLE_LIST"
+    ],
+    [
+      107,
+      34,
+      0,
+      6,
+      0,
+      "STRING"
+    ],
+    [
+      108,
+      34,
+      1,
+      7,
+      0,
       "INT"
     ]
   ],
