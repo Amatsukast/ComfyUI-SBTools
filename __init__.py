@@ -1,6 +1,6 @@
 """ComfyUI-SBTools - Custom Node Collection"""
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 from .nodes.birefnet_node import NODE_CLASS_MAPPINGS as BIREFNET_MAPPINGS
 from .nodes.birefnet_node import NODE_DISPLAY_NAME_MAPPINGS as BIREFNET_DISPLAY

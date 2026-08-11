@@ -5,6 +5,21 @@ All notable changes to ComfyUI-SBTools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-08-11
+
+### Changed
+
+- **Save Text: existing `Sequential` numbering continues differently.** The counter no longer depends on `filename_prefix`, so two prefixes saved into the same folder now share one rising sequence (`alpha_0001, alpha_0002, beta_0003`) where they previously each started at `0001`. No node input, output, or widget changed, so saved workflows load unchanged.
+
+### Fixed
+
+- **Save Text: `Sequential` restarted at `0001` on every execution when `filename_prefix` contained a timestamp.** The counter scan built an exact-match pattern from the expanded prefix, so `20260811_141635_(\d+)` never matched the previous run's `20260811_141634_0001.txt`. The prefix is now a wildcard in the scan: the counter is the highest number already present in the folder plus one, independent of the prefix. Two different prefixes saved into the same folder therefore share one rising sequence rather than each starting over at `0001`.
+- **Save Text: `Sequential` could silently overwrite an existing file.** The counter was taken as scan-maximum + 1 with no check that the resulting path was free, so any file the scan pattern did not cover was clobbered. The counter now advances past occupied names, making `Sequential` never overwrite as documented.
+
+- **Save Text: `separator` was the only input never sanitized**, and it is concatenated into the filename *after* the path-traversal check has run on the directory. `/`, `\`, `../` and `*` raised `FileNotFoundError`/`OSError` mid-write; `:` created an NTFS alternate data stream, leaving a 0-byte visible file with the text hidden inside it; and `\..\..\..\` wrote outside the ComfyUI output directory entirely. It now goes through the same forbidden-character filter as `filename_prefix`, minus the trim and the fallback — a space and an empty string stay valid separators. Only `Sequential` mode used this input, so `Overwrite` and `Append` were never affected.
+
+The sequence is scoped to the folder, the `extension`, and the `counter_position`. The scan deliberately reads only the configured position: interpreting both layouts would let a digit-bearing prefix pass for a counter — `20260811_142349_0001.txt` reads as counter `20260811` under the `Front` pattern — and push the sequence to eight digits. Switching `Front`/`Back` mid-sequence therefore restarts the numbering, though the existence check still prevents any file from being lost.
+
 ## [2.0.0] - 2026-07-30
 
 ### ⚠️ Breaking Changes

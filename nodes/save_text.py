@@ -119,6 +119,7 @@ class SBTools_SaveText:
         folder_path = self._sanitize_folder_path(folder_path)
         filename_prefix = self._sanitize_filename(filename_prefix)
         extension = self._sanitize_extension(extension)
+        separator = self._sanitize_separator(separator)
 
         # 4. Build output directory path
         output_base = folder_paths.get_output_directory()
@@ -153,17 +154,27 @@ class SBTools_SaveText:
         if save_mode == "Sequential":
             counter = self._get_next_counter(
                 target_dir_abs,
-                filename_prefix,
                 extension,
                 counter_position,
                 separator,
             )
-            counter_str = str(counter).zfill(counter_digits)
 
-            if counter_position == "Back":
-                filename = f"{filename_prefix}{separator}{counter_str}.{extension}"
-            else:  # Front
-                filename = f"{counter_str}{separator}{filename_prefix}.{extension}"
+            # Never overwrite: advance past any name already taken. The scan
+            # above only covers the current counter position, so a name left
+            # by the other layout can still be occupied.
+            while True:
+                counter_str = str(counter).zfill(counter_digits)
+                if counter_position == "Back":
+                    filename = (
+                        f"{filename_prefix}{separator}{counter_str}.{extension}"
+                    )
+                else:  # Front
+                    filename = (
+                        f"{counter_str}{separator}{filename_prefix}.{extension}"
+                    )
+                if not os.path.exists(os.path.join(target_dir_abs, filename)):
+                    break
+                counter += 1
         else:
             # Overwrite or Append — no counter
             filename = f"{filename_prefix}.{extension}"
@@ -210,6 +221,16 @@ class SBTools_SaveText:
         sanitized = re.sub(forbidden, "", name).strip()
         return sanitized if sanitized else "untitled"
 
+    def _sanitize_separator(self, sep):
+        """Sanitize the counter separator.
+
+        Same forbidden characters as a filename, but no `.strip()` and no
+        fallback: a space is a deliberate separator (`name 0001.txt`) and an
+        empty one is a documented choice (`name0001.txt`).
+        """
+        forbidden = r'[<>:"/\\|?*]'
+        return re.sub(forbidden, "", sep)
+
     def _sanitize_extension(self, ext):
         """Sanitize extension, stripping leading dots and forbidden characters."""
         ext = ext.lstrip(".")
@@ -221,24 +242,38 @@ class SBTools_SaveText:
     # Counter logic
     # ------------------------------------------------------------------
 
-    def _get_next_counter(self, directory, prefix, extension, position, separator):
+    def _get_next_counter(self, directory, extension, position, separator):
         """Scan directory for existing files and return the next counter value.
+
+        The counter is the highest number already used in this directory plus
+        one, so it always rises. The filename part of the pattern is a
+        wildcard, not the prefix: matching the prefix exactly would restart
+        the sequence whenever the prefix changed — which a strftime prefix
+        such as `%Y%m%d_%H%M%S` does on every execution.
+
+        `extension` stays in the pattern so that a text sequence is not
+        dragged along by the image files sitting in the same output folder.
+
+        Only the configured `position` is scanned. Reading the other layout
+        as well would let a digit-bearing prefix be mistaken for a counter —
+        `20260811_142349_0001.txt` looks like counter `20260811` to the Front
+        pattern — which sends the sequence to eight digits. Switching
+        position therefore starts a new sequence; the caller's existence
+        check still guarantees nothing is overwritten.
 
         Uses os.scandir() for performance and matches any digit length
         for robustness (e.g., counter_digits changed between runs).
         """
-        escaped_prefix = re.escape(prefix)
         escaped_sep = re.escape(separator)
         escaped_ext = re.escape(extension)
 
+        # Lazy wildcard: anchored at both ends it takes the digit run next to
+        # the extension, and with an empty separator it still hands over the
+        # whole run (`name0012.txt` -> 12, not 2).
         if position == "Back":
-            pattern = re.compile(
-                rf"^{escaped_prefix}{escaped_sep}(\d+)\.{escaped_ext}$"
-            )
+            pattern = re.compile(rf"^.*?{escaped_sep}(\d+)\.{escaped_ext}$")
         else:  # Front
-            pattern = re.compile(
-                rf"^(\d+){escaped_sep}{escaped_prefix}\.{escaped_ext}$"
-            )
+            pattern = re.compile(rf"^(\d+){escaped_sep}.*?\.{escaped_ext}$")
 
         max_counter = 0
         try:

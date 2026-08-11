@@ -1,6 +1,6 @@
 # ComfyUI-SBTools
 
-**Latest Version: 2.0.0**
+**Latest Version: 2.0.1**
 
 Custom node collection for ComfyUI. Background removal, color analysis, and dynamic prompt generation tools.
 
@@ -1199,7 +1199,8 @@ Save any text string from your workflow to a local file. Designed as a terminal 
 **Notes:**
 
 - `folder_path` and `filename_prefix` both support Python `strftime` formatting
-- Path traversal (`../`) is blocked; all files are saved inside the ComfyUI output directory
+- `Sequential` always rises and never overwrites. The counter is the highest number already present in the target folder plus one, so it does not depend on `filename_prefix` — a timestamped prefix keeps counting instead of restarting at `0001` every time the clock moves, and two different prefixes saved side by side share one rising sequence. It is scoped to the folder, the `extension`, and the `counter_position`: a new folder (from a time-varying `folder_path`), a different extension, or a switch between `Front` and `Back` starts a fresh sequence
+- Path traversal (`../`) is blocked; all files are saved inside the ComfyUI output directory. Characters Windows forbids in a filename (`< > : " / \ | ? *`) are stripped from `folder_path`, `filename_prefix`, `extension`, and `separator`
 - `counter_digits`, `counter_position`, and `separator` are only active in `Sequential` mode
 - Files are always saved with UTF-8 encoding
 
@@ -1255,6 +1256,13 @@ BiRefNet models by ZhengPeng7 are licensed under **Apache License 2.0**.
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 ### Version History
+
+**v2.0.1 (2026-08-11)** - Save Text fixes
+
+- `Sequential` restarted at `0001` on every execution when `filename_prefix` contained a timestamp
+- `Sequential` could silently overwrite an existing file
+- `separator` was never sanitized, allowing writes outside the output directory
+- Numbering now continues across different prefixes in the same folder
 
 **v2.0.0 (2026-07-30)** - Variable System overhaul
 
